@@ -87,20 +87,6 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-async function readSettings(): Promise<AppSettings> {
-  try {
-    const raw = await fs.readFile(settingsPath(), 'utf-8');
-    return JSON.parse(raw) as AppSettings;
-  } catch {
-    return {};
-  }
-}
-
-async function writeSettings(patch: Partial<AppSettings>): Promise<void> {
-  const current = await readSettings();
-  await fs.writeFile(settingsPath(), JSON.stringify({ ...current, ...patch }), 'utf-8');
-}
-
 async function checkCurrentWorkspaceLicense(): Promise<boolean> {
   return true;
 }
@@ -109,23 +95,20 @@ async function checkCurrentWorkspaceLicense(): Promise<boolean> {
 
 async function runGenerate(
   root: string,
-  opts: { projectName: string; version: string; apiKey?: string; mode?: 'local' | 'ai-full'; polishLoops?: number },
-): Promise<{ ok: boolean; documents?: CopyrightDocuments; aiError?: string; error?: string }> {
+  opts: { projectName: string; version: string; mode?: 'local' },
+): Promise<{ ok: boolean; documents?: CopyrightDocuments; error?: string }> {
   generateAbort = new AbortController();
 
   try {
-    const { documents, aiError } = await runGeneratePipeline({
+    const { documents } = await runGeneratePipeline({
       workspaceRoot: root,
       projectName: opts.projectName,
       version: opts.version,
-      apiKey: opts.apiKey,
       mode: opts.mode,
-      polishLoops: opts.polishLoops,
       signal: generateAbort.signal,
       onProgress: (_stage, message) => sendProgress(message),
-      fetchFn: net.fetch.bind(net),
     });
-    return { ok: true, documents, aiError };
+    return { ok: true, documents };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: message };
@@ -136,29 +119,36 @@ async function runGenerate(
 
 function registerIpc(): void {
   ipcMain.handle('project:selectFolder', async () => {
-    const result = await dialog.showOpenDialog(mainWindow!, {
-      properties: ['openDirectory'],
-    });
-    if (result.canceled || !result.filePaths[0]) return null;
-    workspaceRoot = result.filePaths[0];
-    const meta = await guessProjectMeta(workspaceRoot);
-    const extractor = new CodeExtractor(workspaceRoot);
-    const files = await extractor.scanFiles();
-    const sorted = extractor.sortByPriority(files);
-    const totalLines = files.reduce((acc, f) => acc + (f.lineCount || 0), 0);
-    const fingerprint = generateProjectFingerprint(meta.name, meta.version, sorted);
-    const licensed = true;
-    const compliance = extractor.checkCompliance(files);
-    return {
-      root: workspaceRoot,
-      name: meta.name,
-      version: meta.version,
-      fingerprint,
-      licensed,
-      fileCount: files.length,
-      totalLines,
-      compliance,
-    };
+    try {
+      const result = await dialog.showOpenDialog(mainWindow!, {
+        properties: ['openDirectory'],
+      });
+      if (result.canceled || !result.filePaths[0]) return null;
+      workspaceRoot = result.filePaths[0];
+      const meta = await guessProjectMeta(workspaceRoot);
+      const extractor = new CodeExtractor(workspaceRoot);
+      const files = await extractor.scanFiles();
+      const sorted = extractor.sortByPriority(files);
+      const totalLines = files.reduce((acc, f) => acc + (f.lineCount || 0), 0);
+      const fingerprint = generateProjectFingerprint(meta.name, meta.version, sorted);
+      const licensed = true;
+      const compliance = extractor.checkCompliance(files);
+      return {
+        root: workspaceRoot,
+        name: meta.name,
+        version: meta.version,
+        fingerprint,
+        licensed,
+        fileCount: files.length,
+        totalLines,
+        compliance,
+      };
+    } catch (err) {
+      console.error('Failed to load project folder:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      dialog.showErrorBox('加载项目失败', `读取目录时发生错误，请确保没有包含损坏或过大的二进制文件。\n\n错误详情: ${msg}`);
+      return null;
+    }
   });
 
   ipcMain.handle('project:get', () => workspaceRoot);
@@ -181,29 +171,6 @@ function registerIpc(): void {
     }
   });
 
-  ipcMain.handle('settings:getApiKey', async () => {
-    const s = await readSettings();
-    if (!s.apiKeyEnc || !safeStorage.isEncryptionAvailable()) return '';
-    try {
-      return safeStorage.decryptString(Buffer.from(s.apiKeyEnc, 'base64'));
-    } catch {
-      return '';
-    }
-  });
-
-  ipcMain.handle('settings:setApiKey', async (_e, apiKey: string) => {
-    if (!apiKey.trim()) {
-      await writeSettings({ apiKeyEnc: undefined });
-      return { ok: true };
-    }
-    if (!safeStorage.isEncryptionAvailable()) {
-      return { ok: false, error: '当前系统不支持安全存储 API Key' };
-    }
-    const apiKeyEnc = safeStorage.encryptString(apiKey.trim()).toString('base64');
-    await writeSettings({ apiKeyEnc });
-    return { ok: true };
-  });
-
   ipcMain.handle('copyright:cancel', () => {
     generateAbort?.abort();
     return { ok: true };
@@ -211,7 +178,7 @@ function registerIpc(): void {
 
   ipcMain.handle(
     'copyright:generateAll',
-    async (_e, opts: { projectName: string; version: string; apiKey?: string; mode?: 'local' | 'ai-full'; polishLoops?: number }) => {
+    async (_e, opts: { projectName: string; version: string; mode?: 'local' }) => {
       if (!workspaceRoot) {
         return { ok: false, error: '请先选择项目文件夹' };
       }

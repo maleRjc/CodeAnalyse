@@ -7,8 +7,6 @@ const api: RuanzhuApi = {
   getLicenseStatus: (payload) => ipcRenderer.invoke('license:getStatus', payload),
   activateLicense: (payload) => ipcRenderer.invoke('license:activate', payload),
   deactivateLicense: (payload) => ipcRenderer.invoke('license:deactivate', payload),
-  getApiKey: () => ipcRenderer.invoke('settings:getApiKey'),
-  setApiKey: (key) => ipcRenderer.invoke('settings:setApiKey', key),
   onProgress: (callback) => {
     const listener = (_event: unknown, message: string) => callback(message);
     ipcRenderer.on('copyright:progress', listener);

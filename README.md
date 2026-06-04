@@ -24,7 +24,7 @@ npm run dist
 ## 使用说明
 
 1. 启动应用，点击「选择项目文件夹」
-2. 可选：填写 DeepSeek API Key（用于 AI 填充说明书；留空则生成模板）
+2. 可选：填写 AI API Key（用于 AI 填充说明书；留空则生成模板）
 3. 填写软件名称、版本号
 4. 点击「一键生成软著文档」
 5. 在右侧预览并导出 Markdown / TXT / Word
@@ -37,12 +37,6 @@ npm run dist
 | 完整版 | 无水印、导出 Word、批量处理 |
 
 演示激活码：`RUANZHU-DEMO-PRO`
-
-## 命令行
-
-```bash
-npm run cli -- . -n "我的软件" -o ./output --api-key sk-xxx
-```
 
 ## 测试
 

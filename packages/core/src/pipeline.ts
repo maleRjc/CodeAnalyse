@@ -1,32 +1,26 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { CodeExtractor } from './code-extractor.js';
-import { analyzeWithDeepSeek } from './deepseek-client.js';
 import { DocumentGenerator } from './document-generator.js';
-import { runDeepSeekFullPipeline } from './deepseek-pipeline.js';
 import type { CodeAnalysis, CopyrightDocuments } from './types.js';
 
 export type GenerateStage = 'scanning' | 'analyzing' | 'generating' | 'done';
 
-export type GenerateMode = 'local' | 'ai-full';
+export type GenerateMode = 'local';
 
 export interface GenerateOptions {
   workspaceRoot: string;
   projectName: string;
   version: string;
-  apiKey?: string;
   mode?: GenerateMode;
-  polishLoops?: number;
   onProgress?: (stage: GenerateStage, message: string) => void;
   signal?: AbortSignal;
-  fetchFn?: typeof fetch;
 }
 
 export interface GenerateResult {
   documents: CopyrightDocuments;
   extraction: Awaited<ReturnType<CodeExtractor['extractForCopyright']>>;
   analysis: CodeAnalysis;
-  aiError?: string;
 }
 
 function checkAborted(signal?: AbortSignal): void {
@@ -88,37 +82,18 @@ async function extractFeaturesFromReadme(workspaceRoot: string): Promise<{
 }
 
 export async function runGeneratePipeline(opts: GenerateOptions): Promise<GenerateResult> {
-  const { workspaceRoot, projectName, version, apiKey, mode, onProgress, signal, fetchFn, polishLoops } = opts;
+  const { workspaceRoot, projectName, version, onProgress, signal } = opts;
 
-  const key = apiKey?.trim();
-  
-  if (key && mode !== 'local') {
-    const result = await runDeepSeekFullPipeline({
-      workspaceRoot,
-      projectName,
-      version,
-      apiKey: key,
-      polishLoops,
-      onProgress: onProgress as ((stage: string, message: string) => void) | undefined,
-      signal,
-      fetchFn,
-    });
-
-    return {
-      documents: result.documents,
-      extraction: result.extraction,
-      analysis: result.analysis,
-    };
-  }
+  checkAborted(signal);
 
   // 纯本地生成流程
   onProgress?.('scanning', '正在本地扫描并分析项目代码…');
   const extractor = new CodeExtractor(workspaceRoot);
   const extraction = await extractor.extractForCopyright(
-    undefined,
-    undefined,
     (msg) => onProgress?.('scanning', msg)
   );
+
+  checkAborted(signal);
 
   onProgress?.('generating', '正在本地生成软著说明书与申请表格…');
   const readmeMeta = await extractFeaturesFromReadme(workspaceRoot);

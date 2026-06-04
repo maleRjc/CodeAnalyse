@@ -4,8 +4,6 @@ import path from 'node:path';
 import type { CodeFile, ExtractionResult, ComplianceIssue, ComplianceScanResult, RuanZhuConfig } from './types.js';
 import { cleanCodeLocally } from './local-cleaner.js';
 
-const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
-
 // 排除的二进制文件和打包目录
 const EXCLUDE_DIRS = new Set([
   'node_modules',
@@ -34,6 +32,8 @@ const EXCLUDE_EXTENSIONS = new Set([
   '.class', '.jar', '.war', '.pyc', '.pyo', '.pyd',
   '.map', '.log', '.lock',
   '.hlsl', '.fx', '.glsl', '.frag', '.vert', '.vs', '.ps', '.shader', '.cl',
+  '.lib', '.a', '.pdb', '.ilk', '.suo', '.ncb', '.sdf', '.obj', '.o',
+  '.user', '.qrc', '.pro.user', '.vcxproj', '.filters', '.sln',
 ]);
 
 const EXCLUDE_FILE_PATTERNS = [
@@ -118,7 +118,16 @@ export class CodeExtractor {
         const segments = lowerRel.split('/');
         
         for (const segment of segments) {
-          if (EXCLUDE_DIRS.has(segment)) {
+          if (
+            EXCLUDE_DIRS.has(segment) ||
+            segment.startsWith('build-') ||
+            segment === 'debug' ||
+            segment === 'release' ||
+            segment === '.vs' ||
+            segment === 'ipch' ||
+            segment === 'x64' ||
+            segment === 'x86'
+          ) {
             isExcluded = true;
             break;
           }
@@ -230,11 +239,9 @@ export class CodeExtractor {
   }
 
   /**
-   * 核心代码抽取与清洗主入口 (完全依赖 DeepSeek，移除了本地 fallback)
+   * 核心代码抽取与清洗主入口
    */
   async extractForCopyright(
-    apiKey?: string,
-    fetchFn?: typeof fetch,
     onProgress?: (message: string) => void
   ): Promise<ExtractionResult> {
     // 1. 本地扫描文件
@@ -245,95 +252,19 @@ export class CodeExtractor {
       throw new Error('未能在项目中扫描到任何有效的源代码文件。');
     }
 
-    let allowedPaths: string[] = [];
-
-    if (!apiKey || !apiKey.trim()) {
-      onProgress?.('未检测到 API Key，将使用本地模式进行代码筛选与排序...');
-      const sorted = this.sortByPriority(this.allFiles);
-      allowedPaths = sorted.map(f => f.path);
-    } else {
-      const activeFetch = fetchFn || fetch;
-      // --- 阶段一：AI 智能文件挑选与排序 ---
-      onProgress?.('正在调用 DeepSeek 智能分析结构并筛选核心源程序文件...');
-      const filePaths = this.allFiles.map(f => f.path);
-      // 限制发送给 AI 挑选的文件清单行数，避免 Token 溢出
-      const slicedPaths = filePaths.slice(0, 800);
-
-      const selectSystemPrompt = `你是一个软件著作权申报审查专家与软件架构师。
-以下是用户项目目录下的所有文件路径列表。
-请对这个列表进行分析，挑选出最能代表该软件原创核心业务逻辑的源程序实现文件（如 .c, .cpp, .ts, .py, .java, .go 等，必须排除第三方依赖库、配置文件、静态资源或纯头文件定义声明）。
-请按重要性（入口文件 -> 核心业务逻辑 -> 辅助工具）从高到低排序。
-
-返回 JSON 对象，格式如下（禁止输出 \`\`\` 标记，只输出纯 JSON）：
-{
-  "allowedFiles": ["挑选出的核心原创代码文件相对路径列表，排序后"]
-}`;
-
-      const selectResponse = await activeFetch(DEEPSEEK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: selectSystemPrompt },
-            { role: 'user', content: `项目文件列表：\n${slicedPaths.join('\n')}` }
-          ],
-          temperature: 0.1,
-        }),
-      });
-
-      if (!selectResponse.ok) {
-        const errText = await selectResponse.text();
-        throw new Error(`AI selection API returned status ${selectResponse.status}: ${errText}`);
-      }
-
-      const selectData = await selectResponse.json() as { choices?: { message?: { content?: string } }[] };
-      const rawSelect = selectData.choices?.[0]?.message?.content?.trim() || '';
-      const trimmedSelect = rawSelect.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\n```$/i, '').trim();
-
-      try {
-        const parsed = JSON.parse(trimmedSelect) as { allowedFiles?: string[] };
-        allowedPaths = parsed.allowedFiles || [];
-      } catch {
-        // 容错：如果 JSON 解析失败，则通过正则提取数组
-        const arrayMatch = trimmedSelect.match(/\[[\s\S]*?\]/);
-        if (arrayMatch) {
-          try {
-            allowedPaths = JSON.parse(arrayMatch[0]) as string[];
-          } catch {
-            // fallback
-          }
-        }
-      }
-    }
+    onProgress?.('正在使用本地模式进行代码筛选与排序...');
+    const sorted = this.sortByPriority(this.allFiles);
+    const allowedPaths = sorted.map(f => f.path);
 
     if (allowedPaths.length === 0) {
       throw new Error('未能从项目中挑选出任何核心原创代码文件。');
     }
 
-    // --- 阶段二：逐个文件 AI 清洁与拼接以确保完整且逻辑闭合 ---
+    // --- 阶段二：逐个文件本地清洁与拼接以确保完整且逻辑闭合 ---
     const allFilesMap = new Map(this.allFiles.map(f => [f.path, f]));
     const cleanedCodeChunks: string[] = [];
     const selectedFiles: CodeFile[] = [];
     let accumulatedLines = 0;
-
-    const cleanSystemPrompt = `你是一个专业的软件著作权源程序申报材料整理专家。
-请对以下单个源程序文件的内容进行清洗，提取出最适合申请软著的原创核心代码。
-
-【清洗与提取标准】：
-1. **完全清除第三方非授权依赖**：完全清除无关的第三方依赖库及开源代码（如 FFmpeg, FreeRDP 等相关的所有函数、接口、数据结构定义与声明）。
-2. **剥离十六进制字节数组（最重要）**：必须完全删除所有大段的十六进制/二进制字节数组或编译产物数组定义（例如类似于 const BYTE Pixel_PX_main[] = { 68, 88, 66, ... } 等大块数组及其花括号中的所有数据）。
-3. **着色器源码还原**：如果您在文件中剥离/删除了用于创建着色器的字节数组，必须在原位置替换补充为人类可读的原始 HLSL 着色器源代码函数（例如：实现纹理渲染或格式转换的 VSMain/PSMain 顶点着色器和像素着色器），以确保代码的独创性与逻辑完整性，杜绝审查员怀疑“凑页数”。
-4. **保留所有模块导入与导出声明**：必须保留文件中所有的模块导入 (import / require / #include) 和导出 (export / export default / module.exports) 声明（包括对系统标准库、框架、外部包以及本地相对路径模块文件的导入与导出）。绝对不能删除、隐藏或省略这些关键的声明行，以维护源程序的真实性、连编译性和完整连贯性。
-5. **彻底清除注释与空行**：必须删除所有的代码注释（包括行内注释、块注释、文档注释等）和所有的空行。
-6. **删除多余编译守卫**：删除宏定义防重复包含守卫（如 #ifndef, #define, #endif 等，但保留系统级的 #pragma comment 等指令）。
-7. **保证逻辑闭合**：确保任何保留下来的代码、类、接口或函数体在结构上是完整的、语法闭合的，绝对不能出现中途截断的行或未闭合的花括号。
-8. **保持原始格式**：不要截断长行，保持原始的代码缩进和物理换行，以保证代码的完整可读性。
-
-只返回清洗完毕后的纯代码文本，禁止包裹 \`\`\` 标记，也不要带有任何解释说明性文字。`;
 
     const linesToExtract = this.config.lines_to_extract || 3000;
     const extractionLimit = linesToExtract + 200;
@@ -374,53 +305,22 @@ export class CodeExtractor {
     }
 
     if (cleanedCodeChunks.length === 0) {
-      throw new Error('AI 代码清洗未能提取出任何有效代码，请检查您的 API Key 与网络连接。');
+      throw new Error('代码清洗未能提取出任何有效代码，请检查源文件内容。');
     }
 
     const finalCode = cleanedCodeChunks.join('\n');
     const cleanLines = finalCode.split('\n');
     const totalLines = cleanLines.length;
 
-    // File-level pagination
+    // Line-level pagination to ensure exactly linesToExtract (60 pages * 50 lines = 3000 lines) are generated
     let paginatedCode: string[];
     if (totalLines <= linesToExtract) {
       paginatedCode = cleanLines;
     } else {
-      // Slicing at the file (chunk) level to avoid splitting a file in half
-      const chunkLineCounts = cleanedCodeChunks.map(chunk => chunk.split('\n').length);
       const halfLimit = Math.floor(linesToExtract / 2);
-      
-      let headChunksCount = 0;
-      let headLinesAcc = 0;
-      for (let i = 0; i < cleanedCodeChunks.length; i++) {
-        if (headLinesAcc + chunkLineCounts[i] > halfLimit && headChunksCount > 0) {
-          // If adding this chunk exceeds half the limit, stop unless it's the very first chunk
-          break;
-        }
-        headLinesAcc += chunkLineCounts[i];
-        headChunksCount++;
-      }
-
-      let tailChunksCount = 0;
-      let tailLinesAcc = 0;
-      for (let i = cleanedCodeChunks.length - 1; i >= 0; i--) {
-        // Prevent overlap with head chunks
-        if (i < headChunksCount) {
-          break;
-        }
-        if (tailLinesAcc + chunkLineCounts[i] > halfLimit && tailChunksCount > 0) {
-          // If adding this chunk exceeds half the limit, stop unless it's the first chunk from the end
-          break;
-        }
-        tailLinesAcc += chunkLineCounts[i];
-        tailChunksCount++;
-      }
-
-      const headChunks = cleanedCodeChunks.slice(0, headChunksCount);
-      const tailChunks = cleanedCodeChunks.slice(cleanedCodeChunks.length - tailChunksCount);
-      
-      const slicedCode = [...headChunks, ...tailChunks].join('\n');
-      paginatedCode = slicedCode.split('\n');
+      const headLines = cleanLines.slice(0, halfLimit);
+      const tailLines = cleanLines.slice(totalLines - (linesToExtract - halfLimit));
+      paginatedCode = [...headLines, ...tailLines];
     }
 
     const pages: string[] = [];

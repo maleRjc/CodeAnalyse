@@ -654,7 +654,7 @@
   word-break: break-all;
 }
 
-/* DeepSeek 费用预估与注册引导样式 */
+/* AI 费用预估与注册引导样式 */
 .api-key-container {
   display: flex;
   flex-direction: column;
@@ -666,14 +666,14 @@
   margin-top: 4px;
 }
 
-.deepseek-link {
+.ai-link {
   font-size: 11px;
   color: var(--accent-color);
   text-decoration: none;
   transition: all 0.2s ease;
 }
 
-.deepseek-link:hover {
+.ai-link:hover {
   color: var(--text-primary);
   text-decoration: underline;
 }

@@ -4,20 +4,17 @@
   "version": "1.0.0",
   "description": "软著文档助手 — 独立桌面应用",
   "workspaces": [
-    "packages/*",
+    "packages/core",
     "apps/*"
   ],
   "scripts": {
     "build:core": "npm run build -w @ruanzhu/core",
-    "build:cli": "npm run build:core && npm run build -w @ruanzhu/cli",
-    "build:mcp": "npm run build:core && npm run build -w @ruanzhu/mcp",
     "build:web": "npm run build -w web",
     "test": "npm run test -w @ruanzhu/core",
     "dev": "npm run build:core && npm run dev -w @ruanzhu-doc-assistant/desktop",
     "dev:web": "npm run dev -w web",
-    "build": "npm run build:core && npm run build -w @ruanzhu-doc-assistant/desktop && npm run build -w @ruanzhu/mcp && npm run build:web",
-    "dist": "npm run build && npm run dist -w @ruanzhu-doc-assistant/desktop",
-    "cli": "npm run build:cli && node packages/cli/dist/cli.js"
+    "build": "npm run build:core && npm run build -w @ruanzhu-doc-assistant/desktop && npm run build:web",
+    "dist": "npm run build && npm run dist -w @ruanzhu-doc-assistant/desktop"
   },
   "engines": {
     "node": ">=18.18.0"

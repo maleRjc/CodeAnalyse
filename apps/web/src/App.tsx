@@ -160,7 +160,7 @@ export default function App() {
           <div className="feature-card">
             <div className="card-icon">🧠</div>
             <h3>AI 智能项目提炼</h3>
-            <p>可接入 DeepSeek 模型。自动根据扫描的代码文件和架构逻辑，智能化生成完整的技术规格与说明书大纲，减少手动编写工作。</p>
+            <p>可接入主流 AI 大模型。自动根据扫描的代码文件和架构逻辑，智能化生成完整的技术规格与说明书大纲，减少手动编写工作。</p>
           </div>
 
           <div className="feature-card">

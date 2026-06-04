@@ -9,8 +9,12 @@ interface ProjectBarProps {
 
 export function ProjectBar({ workspaceRoot, theme, onToggleTheme, onFolderSelected }: ProjectBarProps) {
   const handleSelect = async () => {
-    const info = await window.ruanzhu.selectFolder();
-    if (info) onFolderSelected(info);
+    try {
+      const info = await window.ruanzhu.selectFolder();
+      if (info) onFolderSelected(info);
+    } catch (err) {
+      console.error('Select folder failed:', err);
+    }
   };
 
   return (

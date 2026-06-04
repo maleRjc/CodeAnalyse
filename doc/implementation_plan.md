@@ -13,7 +13,7 @@ We need your decisions on a few critical aspects before proceeding with code mod
 ## Open Questions
 
 > [!NOTE]
-> - Should we automatically configure a default DeepSeek API key inside `D:\AutoCode\CodeAnalyse` if there's one you prefer to use?
+> - Should we automatically configure a default AI API key inside `D:\AutoCode\CodeAnalyse` if there's one you prefer to use?
 > - Do you want the landing page (`apps/web`) to be copied as well, or should we only focus on the Electron desktop app (`apps/desktop`)?
 
 ---

@@ -82,17 +82,21 @@ export default function App() {
         if (root) {
           setWorkspaceRoot(root);
           addLog(`检测到上次工作目录: ${root}`);
-          const info = await api().selectFolder();
-          if (info) {
-            setWorkspaceRoot(info.root);
-            setProjectName(info.name);
-            setVersion(info.version);
-            setFingerprint(info.fingerprint);
-            setLicensed(info.licensed);
-            setFileCount(info.fileCount);
-            setTotalLines(info.totalLines);
-            setCompliance(info.compliance || null);
-            addLog(`已载入项目 "${info.name}" (指纹: ${info.fingerprint})`);
+          try {
+            const info = await api().selectFolder();
+            if (info) {
+              setWorkspaceRoot(info.root);
+              setProjectName(info.name);
+              setVersion(info.version);
+              setFingerprint(info.fingerprint);
+              setLicensed(info.licensed);
+              setFileCount(info.fileCount);
+              setTotalLines(info.totalLines);
+              setCompliance(info.compliance || null);
+              addLog(`已载入项目 "${info.name}" (指纹: ${info.fingerprint})`);
+            }
+          } catch (err) {
+            console.error('Auto-load select folder failed:', err);
           }
         }
       });

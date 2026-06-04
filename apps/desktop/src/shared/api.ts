@@ -20,16 +20,12 @@ export interface RuanzhuApi {
   getLicenseStatus: (payload: { root: string; fingerprint: string }) => Promise<{ licensed: boolean }>;
   activateLicense: (payload: { root: string; fingerprint: string; key: string }) => Promise<{ ok: boolean; error?: string }>;
   deactivateLicense: (payload: { root: string }) => Promise<{ ok: boolean }>;
-  getApiKey: () => Promise<string>;
-  setApiKey: (key: string) => Promise<{ ok: boolean; error?: string }>;
   onProgress: (callback: (message: string) => void) => () => void;
   cancelGenerate: () => Promise<{ ok: boolean }>;
   generateAll: (opts: {
     projectName: string;
     version: string;
-    apiKey?: string;
-    mode?: 'local' | 'ai-full';
-    polishLoops?: number;
+    mode?: 'local';
   }) => Promise<{ ok: boolean; documents?: CopyrightDocuments; error?: string }>;
   exportAll: (payload: {
     documents: CopyrightDocuments;

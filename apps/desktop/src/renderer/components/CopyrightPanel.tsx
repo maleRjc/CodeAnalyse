@@ -29,7 +29,6 @@ export function CopyrightPanel({
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
   const [aiWarning, setAiWarning] = useState('');
-  const polishLoops = 15;
 
   // 计算本地扫描概况
   const est = (() => {
@@ -72,9 +71,7 @@ export function CopyrightPanel({
       const res = await window.ruanzhu.generateAll({
         projectName: projectName || '未命名软件',
         version: version || '1.0',
-        apiKey: undefined,
         mode: 'local',
-        polishLoops,
       });
 
       if (!res.ok || !res.documents) {

@@ -10,8 +10,8 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **元数据自动提取** | - | 自动扫描 `app.json` (小程序)、`package.json` (Node)、`pom.xml` (Java)、`Cargo.toml` (Rust)、`pyproject.toml` (Python) 等 | 仅猜测 `package.json` 中的 `name` 和 `version` | **[建议引入] 多生态元数据扫描**：扩展 [guessProjectMeta](file:///d:/AutoCode/CodeAnalyse/apps/desktop/src/main/index.ts#L107-L119)，支持多种主流技术栈的配置自动解析，实现“零手动输入”。 |
 | **自定义过滤与配置** | 支持项目根目录下放置 `.ramileconfig.json` 来配置源目录、排除项、扩展名和提取行数 | 依靠 Trae IDE 的本地配置或 Python 脚本规则 | 所有的过滤逻辑、忽略目录/后缀名全部硬编码在 core 包中 | **[建议引入] 项目级配置文件支持**：支持检测并解析项目根目录下的 `.ruanzhuconfig.json`（或兼容 `.ramileconfig.json`），允许用户对提取参数进行定制。 |
-| **代码文件筛选与排序** | 基于扩展名过滤 + 通用提取 | 基于规则的文件优先级定义（如优先 `app.js` / `main.js`，其次是 pages/components 等） | 通过 AI (DeepSeek) 智能挑选并排序核心文件，辅助以正则匹配 | **[保留并优化]**：保留我们的 DeepSeek 智能挑选优势，同时可以引入更完善的本地扫描兜底排序规则（在无 API Key 或本地扫描模式下起作用）。 |
-| **文档生成模板** | 仅生成代码 docx | 依托 `references/` 下的 Markdown 模板生成申请表、说明书、用户手册 | 依托 [document-generator.ts](file:///d:/AutoCode/CodeAnalyse/packages/core/src/document-generator.ts) 与 DeepSeek Pipeline 生成 | **[考虑引入] 开放式 Markdown 模板**：允许用户在项目目录中自定义说明书或申请表的 MD 骨架，替代我们硬编码的 System Prompt。 |
+| **代码文件筛选与排序** | 基于扩展名过滤 + 通用提取 | 基于规则的文件优先级定义（如优先 `app.js` / `main.js`，其次是 pages/components 等） | 通过 AI 智能挑选并排序核心文件，辅助以正则匹配 | **[保留并优化]**：保留我们的 AI 智能挑选优势，同时可以引入更完善的本地扫描兜底排序规则（在无 API Key 或本地扫描模式下起作用）。 |
+| **文档生成模板** | 仅生成代码 docx | 依托 `references/` 下 of Markdown 模板生成申请表、说明书、用户手册 | 依托 [document-generator.ts](file:///d:/AutoCode/CodeAnalyse/packages/core/src/document-generator.ts) 与 AI Pipeline 生成 | **[考虑引入] 开放式 Markdown 模板**：允许用户在项目目录中自定义说明书或申请表的 MD 骨架，替代我们硬编码的 System Prompt。 |
 
 ---
 
@@ -55,7 +55,7 @@
 
 ### 借鉴点 3：优化文件选择的本地优先级策略 (Rule-based File Priority)
 
-在没有配置 API Key 或 DeepSeek 调用限额失败的“本地降级/预览模式”中，良好的排序规则十分关键。
+在没有配置 API Key 或 AI 调用限额失败的“本地降级/预览模式”中，良好的排序规则十分关键。
 `chinese-copyright-application-skill` 使用了非常直接的按层级赋权的数组排序：
 ```python
 def _file_priority(self, file_path: str) -> int:

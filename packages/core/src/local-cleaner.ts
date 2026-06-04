@@ -11,7 +11,8 @@ export function stripCommentsAndEmptyLines(code: string, ext: string): string {
   let result = '';
   let i = 0;
 
-  const isPython = ext === 'python' || ext === 'py';
+  const isHashComment = ['py', 'python', 'sh', 'ps1', 'yaml', 'yml', 'r', 'pl', 'rb'].includes(ext);
+  const isSql = ext === 'sql';
 
   while (i < code.length) {
     const char = code[i];
@@ -32,8 +33,8 @@ export function stripCommentsAndEmptyLines(code: string, ext: string): string {
       continue;
     }
 
-    // Python 特殊注释处理
-    if (isPython) {
+    // Python / Shell / Ruby 等 '#' 风格注释处理
+    if (isHashComment) {
       if (inSingleComment) {
         if (char === '\n') {
           inSingleComment = false;
@@ -42,21 +43,64 @@ export function stripCommentsAndEmptyLines(code: string, ext: string): string {
         i++;
         continue;
       }
-      // 三引号多行字符串/注释
-      if (code.slice(i, i + 3) === '"""' || code.slice(i, i + 3) === "'''") {
-        const triple = code.slice(i, i + 3);
-        i += 3;
-        const endIdx = code.indexOf(triple, i);
-        if (endIdx !== -1) {
-          i = endIdx + 3;
-        } else {
-          i = code.length;
+      // Python 三引号多行字符串/注释
+      if (ext === 'py' || ext === 'python') {
+        if (code.slice(i, i + 3) === '"""' || code.slice(i, i + 3) === "'''") {
+          const triple = code.slice(i, i + 3);
+          i += 3;
+          const endIdx = code.indexOf(triple, i);
+          if (endIdx !== -1) {
+            i = endIdx + 3;
+          } else {
+            i = code.length;
+          }
+          continue;
         }
-        continue;
       }
       if (char === '#') {
         inSingleComment = true;
         i++;
+        continue;
+      }
+      if (char === '"' || char === "'") {
+        inString = true;
+        stringChar = char;
+        result += char;
+        i++;
+        continue;
+      }
+      result += char;
+      i++;
+      continue;
+    }
+
+    // SQL 注释处理
+    if (isSql) {
+      if (inSingleComment) {
+        if (char === '\n') {
+          inSingleComment = false;
+          result += char;
+        }
+        i++;
+        continue;
+      }
+      if (inMultiComment) {
+        if (char === '*' && nextChar === '/') {
+          inMultiComment = false;
+          i += 2;
+        } else {
+          i++;
+        }
+        continue;
+      }
+      if (char === '-' && nextChar === '-') {
+        inSingleComment = true;
+        i += 2;
+        continue;
+      }
+      if (char === '/' && nextChar === '*') {
+        inMultiComment = true;
+        i += 2;
         continue;
       }
       if (char === '"' || char === "'") {

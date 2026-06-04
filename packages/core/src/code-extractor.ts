@@ -208,9 +208,10 @@ export class CodeExtractor {
         
         // 核心入口文件最优先
         if (/^app\.(js|ts|py|go|java|cpp|c)$/i.test(baseName)) return 0;
-        if (/^main\.(js|ts|py|go|java|cpp|c)$/i.test(baseName)) return 1;
+        if (/^main\.(js|ts|py|go|java|cpp|c|dart)$/i.test(baseName)) return 1;
         if (/^index\.(js|ts|py|go|java|cpp|c)$/i.test(baseName)) return 2;
         if (/^server\.(js|ts|py|go|java)$/i.test(baseName)) return 3;
+        if (/^program\.(cs)$/i.test(baseName)) return 4;
         
         // 业务逻辑次优先
         if (filePath.includes('/controller/') || filePath.includes('controller')) return 10;

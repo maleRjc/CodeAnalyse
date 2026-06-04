@@ -99,6 +99,38 @@ export async function guessProjectMeta(workspaceRoot: string): Promise<ProjectMe
     }
   } catch {}
 
+  // 7. Flutter / Dart (pubspec.yaml)
+  try {
+    const pubspecPath = path.join(workspaceRoot, 'pubspec.yaml');
+    const raw = await fsPromises.readFile(pubspecPath, 'utf-8');
+    const nameMatch = raw.match(/^\s*name\s*:\s*([^\s\n]+)/m);
+    const versionMatch = raw.match(/^\s*version\s*:\s*([^\s\n]+)/m);
+    if (nameMatch) {
+      return {
+        name: nameMatch[1].trim(),
+        version: versionMatch ? versionMatch[1].trim() : '1.0.0',
+      };
+    }
+  } catch {}
+
+  // 8. C# (.csproj)
+  try {
+    const files = await fsPromises.readdir(workspaceRoot);
+    const csprojFile = files.find(f => f.toLowerCase().endsWith('.csproj'));
+    if (csprojFile) {
+      const csprojPath = path.join(workspaceRoot, csprojFile);
+      const raw = await fsPromises.readFile(csprojPath, 'utf-8');
+      const assemblyNameMatch = raw.match(/<AssemblyName>([^<]+)<\/AssemblyName>/i);
+      const rootNamespaceMatch = raw.match(/<RootNamespace>([^<]+)<\/RootNamespace>/i);
+      const versionMatch = raw.match(/<Version>([^<]+)<\/Version>/i);
+      const name = assemblyNameMatch?.[1] || rootNamespaceMatch?.[1] || path.basename(csprojFile, path.extname(csprojFile));
+      return {
+        name: name.trim(),
+        version: versionMatch ? versionMatch[1].trim() : '1.0.0',
+      };
+    }
+  } catch {}
+
   // Fallback
   return {
     name: path.basename(workspaceRoot),

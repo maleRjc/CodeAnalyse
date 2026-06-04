@@ -100,4 +100,39 @@ go 1.20
     assert.equal(meta.name, "some_random_directory");
     assert.equal(meta.version, "1.0.0");
   });
+
+  test('Flutter pubspec.yaml metadata extraction', async () => {
+    const flutterProjPath = path.join(tempRoot, 'flutter_project');
+    await fs.mkdir(flutterProjPath, { recursive: true });
+
+    const pubspecContent = `
+name: flutter_test_app
+description: A new Flutter project.
+version: 1.2.3+4
+`;
+    await fs.writeFile(path.join(flutterProjPath, 'pubspec.yaml'), pubspecContent);
+
+    const meta = await guessProjectMeta(flutterProjPath);
+    assert.equal(meta.name, "flutter_test_app");
+    assert.equal(meta.version, "1.2.3+4");
+  });
+
+  test('C# csproj metadata extraction', async () => {
+    const csProjPath = path.join(tempRoot, 'csharp_project');
+    await fs.mkdir(csProjPath, { recursive: true });
+
+    const csprojContent = `
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>CSharpTestAssembly</AssemblyName>
+    <Version>3.4.5</Version>
+  </PropertyGroup>
+</Project>
+`;
+    await fs.writeFile(path.join(csProjPath, 'TestProject.csproj'), csprojContent);
+
+    const meta = await guessProjectMeta(csProjPath);
+    assert.equal(meta.name, "CSharpTestAssembly");
+    assert.equal(meta.version, "3.4.5");
+  });
 });

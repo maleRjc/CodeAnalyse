@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(11, 15, 23, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 242, 254, 0.4);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #0B0F17;
+  color: #94A3B8;
+  font-family: 'Outfit', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(0, 242, 254, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(79, 172, 254, 0.08) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(79, 172, 254, 0.03) 0px, transparent 60%);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: #00F2FE;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: #4FACFE;
+}
+
+h1, h2, h3, h4 {
+  color: #fff;
+  font-weight: 600;
+  margin: 0;
+}
+
+code {
+  font-family: 'JetBrains Mono', monospace;
+}

@@ -1,0 +1,53 @@
+{
+  "name": "@ruanzhu-doc-assistant/desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "软著文档助手",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build && node -e \"require('fs').copyFileSync('build/icon.png', 'out/main/icon.png')\"",
+    "preview": "electron-vite preview",
+    "dist": "npm run build && electron-builder --win portable --x64 --publish never"
+  },
+  "dependencies": {
+    "@ruanzhu/core": "1.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "35.7.5",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^3.1.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.2"
+  },
+  "build": {
+    "appId": "com.ruanzhudocassistant.app",
+    "productName": "软著文档助手",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
+    }
+  }
+}

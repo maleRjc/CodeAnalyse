@@ -1,0 +1,276 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg-primary: #0B0F17;
+  --bg-secondary: rgba(22, 30, 49, 0.6);
+  --bg-sidebar: rgba(15, 23, 42, 0.45);
+  --bg-main: rgba(11, 15, 23, 0.8);
+  --bg-card: rgba(22, 30, 49, 0.4);
+  --bg-input: rgba(15, 23, 42, 0.6);
+  --bg-input-focus: rgba(15, 23, 42, 0.8);
+  --bg-tab: rgba(255, 255, 255, 0.02);
+  --bg-tab-hover: rgba(255, 255, 255, 0.06);
+  --bg-tab-active: rgba(0, 242, 254, 0.1);
+  --bg-btn: rgba(255, 255, 255, 0.03);
+  --bg-btn-hover: rgba(255, 255, 255, 0.08);
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-color-light: rgba(255, 255, 255, 0.04);
+  --border-input: rgba(255, 255, 255, 0.08);
+  --text-primary: #ffffff;
+  --text-secondary: #E2E8F0;
+  --text-muted: #94A3B8;
+  --text-dark: #0B0F17;
+  --accent-color: #00F2FE;
+  --accent-gradient: linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%);
+  --accent-btn-shadow: rgba(0, 242, 254, 0.25);
+  --body-radial-gradient: 
+    radial-gradient(at 0% 0%, rgba(0, 242, 254, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(79, 172, 254, 0.08) 0px, transparent 50%);
+}
+
+html[data-theme='light'] {
+  --bg-primary: #F8FAFC;
+  --bg-secondary: rgba(255, 255, 255, 0.8);
+  --bg-sidebar: rgba(241, 245, 249, 0.85);
+  --bg-main: rgba(255, 255, 255, 0.95);
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-input: #FFFFFF;
+  --bg-input-focus: #FFFFFF;
+  --bg-tab: rgba(15, 23, 42, 0.03);
+  --bg-tab-hover: rgba(15, 23, 42, 0.06);
+  --bg-tab-active: rgba(14, 165, 233, 0.15);
+  --bg-btn: rgba(15, 23, 42, 0.05);
+  --bg-btn-hover: rgba(15, 23, 42, 0.1);
+  --border-color: rgba(15, 23, 42, 0.08);
+  --border-color-light: rgba(15, 23, 42, 0.05);
+  --border-input: rgba(15, 23, 42, 0.15);
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+  --text-dark: #FFFFFF;
+  --accent-color: #0284C7;
+  --accent-gradient: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%);
+  --accent-btn-shadow: rgba(2, 132, 199, 0.2);
+  --body-radial-gradient: 
+    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(2, 132, 199, 0.1) 0px, transparent 50%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg-primary);
+  overflow: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+body {
+  font-family: 'Outfit', 'Segoe UI', -apple-system, sans-serif;
+  color: var(--text-secondary);
+  -webkit-font-smoothing: antialiased;
+  background-image: var(--body-radial-gradient);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.project-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  background: var(--bg-secondary);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.project-bar .brand {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px rgba(0, 242, 254, 0.15);
+}
+
+.project-bar .project-path {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--bg-btn);
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color-light);
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  padding: 8px 16px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  background: var(--accent-gradient);
+  color: var(--text-dark);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 15px var(--accent-btn-shadow);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 25px var(--accent-btn-shadow);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* 主题切换按钮 */
+.btn-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-btn);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.btn-theme-toggle:hover {
+  background: var(--bg-btn-hover);
+  border-color: var(--border-input);
+  color: var(--text-primary);
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 340px;
+  flex-shrink: 0;
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(16px);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+  transition: background 0.3s ease;
+}
+
+.welcome {
+  padding: 64px;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: auto;
+  text-align: center;
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.welcome h2 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-top: 0;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, var(--text-primary) 30%, var(--text-muted) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.welcome p {
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 10px 0;
+  text-align: left;
+}
+
+.welcome .disclaimer {
+  margin-top: 32px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  border-top: 1px solid var(--border-color-light);
+  padding-top: 16px;
+}
+
+@media print {
+  .project-bar,
+  .sidebar,
+  .toolbar {
+    display: none !important;
+  }
+
+  .main,
+  .copyright-view,
+  .content {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .document-editor {
+    color: #000 !important;
+    font-size: 10pt !important;
+    background: transparent !important;
+    border: none !important;
+    height: auto !important;
+  }
+}

@@ -209,4 +209,153 @@ export class CodeIntel {
 
     return flowSequence;
   }
+
+  /**
+   * Automatically deduce the technology stack and functional modules
+   */
+  analyzeStructure(): {
+    projectType: string;
+    architecture: string;
+    runtime: string;
+    modules: { name: string; description: string }[];
+  } {
+    const files = Array.from(this.filesMap.values());
+    const flowFiles = this.analyzeFlow();
+
+    let isQt = false;
+    let isReact = false;
+    let isVue = false;
+    let isNode = false;
+    let isPython = false;
+    let isCsharp = false;
+    let isGo = false;
+    let isFlutter = false;
+
+    for (const file of files) {
+      const lowerPath = file.path.toLowerCase();
+      if (
+        lowerPath.includes('qmainwindow') ||
+        lowerPath.includes('qapplication') ||
+        lowerPath.includes('qwidget') ||
+        lowerPath.endsWith('.pro')
+      ) {
+        isQt = true;
+      }
+      if (lowerPath.includes('react') || lowerPath.endsWith('.jsx') || lowerPath.endsWith('.tsx')) {
+        isReact = true;
+      }
+      if (lowerPath.includes('vue')) {
+        isVue = true;
+      }
+      if (lowerPath.includes('package.json') && !isReact && !isVue) {
+        isNode = true;
+      }
+      if (lowerPath.endsWith('.py')) {
+        isPython = true;
+      }
+      if (lowerPath.endsWith('.cs') || lowerPath.endsWith('.csproj')) {
+        isCsharp = true;
+      }
+      if (lowerPath.endsWith('.go') || lowerPath.endsWith('go.mod')) {
+        isGo = true;
+      }
+      if (lowerPath.endsWith('pubspec.yaml') || lowerPath.endsWith('.dart')) {
+        isFlutter = true;
+      }
+    }
+
+    let projectType = '通用应用软件系统';
+    let architecture = '采用模块化分层设计架构，由核心程序入口驱动。';
+    let runtime = '标准软件系统运行环境';
+
+    if (isQt) {
+      projectType = 'Qt C++ 桌面客户端软件';
+      architecture = '基于 Qt 信号与槽机制、C++ 强类型面向对象机制的 MVC/MVVM 桌面应用架构。';
+      runtime = 'C++ 运行环境 (MinGW / MSVC) 与 Qt 动态库运行时组件';
+    } else if (isFlutter) {
+      projectType = 'Flutter 移动端/跨平台应用软件';
+      architecture = '基于 Dart Widget 树与声明式状态管理的高性能跨平台客户端架构。';
+      runtime = 'Flutter SDK 与 Android/iOS/Desktop 原生宿主运行时';
+    } else if (isReact) {
+      projectType = 'React 现代前端单页 Web 应用';
+      architecture = '基于组件化声明渲染、虚拟 DOM 与单向数据流的前端技术架构。';
+      runtime = '现代主流 Web 浏览器 (Chrome, Safari, Edge, Firefox)';
+    } else if (isVue) {
+      projectType = 'Vue 组件化前端 Web 应用';
+      architecture = '基于双向数据绑定与轻量级组件式架构的前端 Web 体系。';
+      runtime = '现代主流 Web 浏览器';
+    } else if (isCsharp) {
+      projectType = 'C# .NET 业务系统应用';
+      architecture = '基于 .NET 强类型组件体系与分层设计的 Windows 桌面/服务架构。';
+      runtime = '.NET Core / .NET Framework 运行环境';
+    } else if (isPython) {
+      projectType = 'Python 智能算法/数据处理系统';
+      architecture = '基于 Python 模块化与数据驱动机制的技术架构。';
+      runtime = 'Python 3.8+ 解释器环境与标准依赖库';
+    } else if (isGo) {
+      projectType = 'Go 微服务/后端服务系统';
+      architecture = '基于 Go 高并发协程与轻量级接口机制的后端高并发服务架构。';
+      runtime = 'Linux/Windows 操作系统原生二进制可执行载体';
+    }
+
+    // Identify active folders/modules in flow files
+    const modulesMap = new Map<string, string>();
+    for (const file of flowFiles) {
+      const dirName = path.dirname(file.path).replace(/\\/g, '/');
+      if (dirName === '.' || dirName === '') continue;
+
+      const topDir = dirName.split('/')[0];
+      if (!modulesMap.has(topDir)) {
+        const nameLower = topDir.toLowerCase();
+        let desc = '存放该业务板块的核心处理代码与辅助方法。';
+        if (
+          nameLower.includes('db') ||
+          nameLower.includes('sql') ||
+          nameLower.includes('model') ||
+          nameLower.includes('store') ||
+          nameLower.includes('qrencode')
+        ) {
+          desc = '本地数据持久化与数据存储/编码查询逻辑层。';
+        } else if (
+          nameLower.includes('ui') ||
+          nameLower.includes('view') ||
+          nameLower.includes('components') ||
+          nameLower.includes('styles') ||
+          nameLower.includes('login') ||
+          nameLower.includes('register') ||
+          nameLower.includes('resetpwd')
+        ) {
+          desc = '用户交互呈现与渲染视图状态控制层。';
+        } else if (
+          nameLower.includes('net') ||
+          nameLower.includes('http') ||
+          nameLower.includes('api') ||
+          nameLower.includes('socket') ||
+          nameLower.includes('usb') ||
+          nameLower.includes('update')
+        ) {
+          desc = '网络通信同步、外部接口与外部硬件数据传输控制层。';
+        } else if (
+          nameLower.includes('utils') ||
+          nameLower.includes('helpers') ||
+          nameLower.includes('tools')
+        ) {
+          desc = '系统通用辅助工具类与共用算法包。';
+        }
+        modulesMap.set(topDir, desc);
+      }
+    }
+
+    const modules = Array.from(modulesMap.entries()).map(([name, description]) => ({
+      name,
+      description,
+    })).slice(0, 8);
+
+    return {
+      projectType,
+      architecture,
+      runtime,
+      modules,
+    };
+  }
 }

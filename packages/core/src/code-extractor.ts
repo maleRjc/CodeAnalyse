@@ -3,6 +3,7 @@ import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import type { CodeFile, ExtractionResult, ComplianceIssue, ComplianceScanResult, RuanZhuConfig } from './types.js';
 import { cleanCodeLocally } from './local-cleaner.js';
+import { CodeIntel } from './code-intel.js';
 
 // 排除的二进制文件和打包目录
 const EXCLUDE_DIRS = new Set([
@@ -253,8 +254,21 @@ export class CodeExtractor {
       throw new Error('未能在项目中扫描到任何有效的源代码文件。');
     }
 
-    onProgress?.('正在使用本地模式进行代码筛选与排序...');
-    const sorted = this.sortByPriority(this.allFiles);
+    onProgress?.('正在运行 CodeIntel 智能流分析，提取核心逻辑闭环...');
+    const intel = new CodeIntel(this.workspaceRoot, this.allFiles);
+    const flowFiles = intel.analyzeFlow();
+
+    let sorted: CodeFile[] = [];
+    if (flowFiles.length > 0) {
+      onProgress?.(`已追踪到以入口文件为起点的 ${flowFiles.length} 个强关联核心依赖文件。`);
+      const flowPaths = new Set(flowFiles.map(f => f.path));
+      const remainingFiles = this.allFiles.filter(f => !flowPaths.has(f.path));
+      const sortedRemaining = this.sortByPriority(remainingFiles);
+      sorted = [...flowFiles, ...sortedRemaining];
+    } else {
+      onProgress?.('未检测到明确的入口依赖流，退回到按文件类型与目录优先级排序。');
+      sorted = this.sortByPriority(this.allFiles);
+    }
     const allowedPaths = sorted.map(f => f.path);
 
     if (allowedPaths.length === 0) {

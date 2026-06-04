@@ -1,6 +1,7 @@
 export { CodeExtractor } from './code-extractor.js';
 export { guessProjectMeta } from './project-meta.js';
 export { DocumentGenerator } from './document-generator.js';
+export { CodeIntel } from './code-intel.js';
 export { writeDocument, type SaveFormat, writeVersionDescription, writeCooperativeAgreement, writeCommissionedContract } from './formatter.js';
 export { applyWatermark, validateLicenseKey, WATERMARK_LINE } from './license.js';
 export { generateProjectFingerprint } from './fingerprint.js';

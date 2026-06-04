@@ -44,7 +44,7 @@ export interface ProjectAnalysis {
 
 export interface ComplianceIssue {
   type: 'info' | 'warning' | 'error';
-  category: 'line_count' | 'copyright' | 'minified' | 'file_count';
+  category: 'line_count' | 'copyright' | 'minified' | 'file_count' | 'entry_file' | 'core_features';
   message: string;
   filePath?: string;
   details?: string;

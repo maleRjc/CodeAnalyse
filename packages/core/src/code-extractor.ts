@@ -391,6 +391,116 @@ export class CodeExtractor {
       });
     }
 
+    // 3. Entry File & Logic Continuity Check
+    const hasEntryFile = files.some(file => {
+      const baseName = path.basename(file.path).toLowerCase();
+      return (
+        baseName.startsWith('main.') ||
+        baseName.startsWith('app.') ||
+        baseName.startsWith('index.') ||
+        baseName.startsWith('server.') ||
+        baseName.startsWith('program.') ||
+        baseName === 'program.cs'
+      );
+    });
+
+    if (!hasEntryFile) {
+      score -= 10;
+      issues.push({
+        type: 'warning',
+        category: 'entry_file',
+        message: '未检测到明确的项目启动入口文件（如 main.*, app.*, index.*, program.cs 等）。',
+        details: '版权中心要求鉴别材料首页需为核心入口文件，若无明确程序起点，可能被质疑代码不连贯、碎片化拼接。建议在项目根目录下放置主程序入口，或通过重命名方式确保主入口排在最前面。',
+      });
+    } else {
+      const entryFile = files.find(file => {
+        const baseName = path.basename(file.path).toLowerCase();
+        return (
+          baseName.startsWith('main.') ||
+          baseName.startsWith('app.') ||
+          baseName.startsWith('index.') ||
+          baseName.startsWith('server.') ||
+          baseName.startsWith('program.') ||
+          baseName === 'program.cs'
+        );
+      });
+      issues.push({
+        type: 'info',
+        category: 'entry_file',
+        message: `已检测到核心程序入口文件「${entryFile?.path}」，系统已将其优先排在文档第 1 页最上方以保障逻辑起点连贯。`,
+      });
+    }
+
+    // 4. Core System Module Check (软件核心功能模块覆盖检测)
+    let hasUiKeywords = false;
+    let hasNetworkKeywords = false;
+    let hasDatabaseKeywords = false;
+
+    const uiWords = ['ui', 'view', 'album', 'gallery', 'photo', 'image', 'picture', 'display', 'screen', 'widget', 'component', 'qpixmap', 'qimage'];
+    const networkWords = ['http', 'network', 'socket', 'api', 'request', 'fetch', 'axios', 'sync', 'upload', 'download', 'websocket', 'client', 'tcp', 'udp'];
+    const dbWords = ['sql', 'database', 'sqlite', 'db', 'query', 'insert', 'select', 'transaction', 'storage', 'localstorage', 'cache', 'indexeddb'];
+
+    for (const file of files) {
+      const contentLower = file.content.toLowerCase();
+      if (!hasUiKeywords && uiWords.some(w => contentLower.includes(w))) {
+        hasUiKeywords = true;
+      }
+      if (!hasNetworkKeywords && networkWords.some(w => contentLower.includes(w))) {
+        hasNetworkKeywords = true;
+      }
+      if (!hasDatabaseKeywords && dbWords.some(w => contentLower.includes(w))) {
+        hasDatabaseKeywords = true;
+      }
+    }
+
+    if (!hasUiKeywords) {
+      score -= 10;
+      issues.push({
+        type: 'warning',
+        category: 'core_features',
+        message: '未检测到明显的软件界面展示或相册展示相关的模块定义。',
+        details: '软著代码应当体现直观的功能业务模块。如果该项目是图形/相册类系统，缺少 UI/图像呈现逻辑易招致原创性不足的嫌疑。建议完善界面渲染部分的代码。',
+      });
+    } else {
+      issues.push({
+        type: 'info',
+        category: 'core_features',
+        message: '已成功匹配到用户界面/相册展示相关的核心代码模块（UI/Gallery/Image 等）。',
+      });
+    }
+
+    if (!hasNetworkKeywords) {
+      score -= 10;
+      issues.push({
+        type: 'warning',
+        category: 'core_features',
+        message: '未检测到明显的网络传输、通信或数据同步相关的模块定义。',
+        details: '现代应用普遍具备网络通信或云同步逻辑。建议确认是否完整导入了涉及 Axios/Fetch/Socket/API 通信传输的代码文件。',
+      });
+    } else {
+      issues.push({
+        type: 'info',
+        category: 'core_features',
+        message: '已成功匹配到网络传输/通信同步相关的代码实现（Http/Axios/Sync 等）。',
+      });
+    }
+
+    if (!hasDatabaseKeywords) {
+      score -= 10;
+      issues.push({
+        type: 'warning',
+        category: 'core_features',
+        message: '未检测到明显的本地数据库、持久化缓存或数据存储模块。',
+        details: '软著审查员通常期望看到带有本地持久化（如 SQLite/SQL/Cache/LocalStorage/IndexedDB）的数据存取逻辑。建议补充该部分代码以健全业务闭环。',
+      });
+    } else {
+      issues.push({
+        type: 'info',
+        category: 'core_features',
+        message: '已成功匹配到本地数据持久化/数据库查询相关的逻辑（SQL/Storage/DB 等）。',
+      });
+    }
+
     // 3. Copyright Header Conflicts and Minified/Build Files Checks
     let copyrightDeductions = 0;
     let minifiedDeductions = 0;

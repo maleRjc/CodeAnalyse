@@ -122,12 +122,25 @@ export class CodeExtractor {
           if (
             EXCLUDE_DIRS.has(segment) ||
             segment.startsWith('build-') ||
+            segment.startsWith('dependencies') ||
             segment === 'debug' ||
             segment === 'release' ||
             segment === '.vs' ||
             segment === 'ipch' ||
             segment === 'x64' ||
-            segment === 'x86'
+            segment === 'x86' ||
+            segment === 'win32' ||
+            segment === 'win64' ||
+            segment === '3rdparty' ||
+            segment === 'thirdparty' ||
+            segment === 'third_party' ||
+            segment === 'extern' ||
+            segment === 'externals' ||
+            segment === 'external' ||
+            segment === 'deps' ||
+            segment === 'libs' ||
+            segment === 'library' ||
+            segment === 'libraries'
           ) {
             isExcluded = true;
             break;

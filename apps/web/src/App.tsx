@@ -28,7 +28,7 @@ export default function App() {
     <div className="landing-container">
       {/* 头部导航 */}
       <header className="navbar">
-        <div className="nav-brand">软著文档助手</div>
+        <div className="nav-brand">AI软著助手</div>
         <div className="nav-links">
           <a href="#features">核心功能</a>
           <a href="#preview">效果演示</a>
@@ -147,7 +147,7 @@ export default function App() {
           <div className="preview-body">
             {activeTab === 'source' && (
               <div className="word-header-mock">
-                <span>软著文档助手 软件源代码清单 [v1.0.0]</span>
+                <span>AI软著助手 软件源代码清单 [v1.0.0]</span>
                 <span>第 1 页 共 60 页</span>
               </div>
             )}
@@ -205,7 +205,7 @@ export default function App() {
 
       {/* 页脚 */}
       <footer className="footer">
-        <p>© 2026 软著文档助手. 版权所有。</p>
+        <p>© 2026 AI软著助手. 版权所有。</p>
         <p className="footer-tips">安全声明：本软件完全在 Windows 本地沙箱离线运行，源码绝不上传任何服务器，请放心使用。</p>
       </footer>
     </div>

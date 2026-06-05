@@ -21,7 +21,7 @@ export function ProjectBar({ workspaceRoot, theme, onToggleTheme, onFolderSelect
     <header className="project-bar">
       <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <img src={logo} alt="Logo" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-        软著文档助手
+        AI软著助手
       </div>
       <button type="button" className="btn-primary" onClick={() => void handleSelect()}>
         选择项目文件夹

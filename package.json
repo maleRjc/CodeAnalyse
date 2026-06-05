@@ -2,7 +2,7 @@
   "name": "ruanzhu-doc-assistant",
   "private": true,
   "version": "1.0.0",
-  "description": "软著文档助手 — 独立桌面应用",
+  "description": "AI软著助手 — 独立桌面应用",
   "workspaces": [
     "packages/core",
     "apps/*"

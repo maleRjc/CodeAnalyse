@@ -252,7 +252,7 @@ export default function App() {
                       />
                     ) : (
                       <div className="welcome">
-                        <h2>软著文档助手</h2>
+                        <h2>AI软著助手</h2>
                         
                         {!workspaceRoot && (
                           <>

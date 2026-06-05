@@ -17,7 +17,7 @@ async function main() {
 
   const result = await runGeneratePipeline({
     workspaceRoot,
-    projectName: '软著文档助手',
+    projectName: 'AI软著助手',
     version: '1.0.0',
     mode: 'local',
     onProgress: (stage, message) => {
@@ -26,7 +26,7 @@ async function main() {
   });
 
   const stamp = '2026-06-05';
-  const prefix = '软著文档助手';
+  const prefix = 'AI软著助手';
 
   console.log('正在写入生成的文件...');
 

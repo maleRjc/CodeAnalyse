@@ -45,7 +45,7 @@ function createWindow(): void {
     height: 840,
     minWidth: 900,
     minHeight: 600,
-    title: '软著文档助手',
+    title: 'AI软著助手',
     icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),

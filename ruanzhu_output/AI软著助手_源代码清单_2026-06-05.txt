@@ -1,4 +1,4 @@
-[软著文档助手 v1.0.0] 第1页 共60页
+[AI软著助手 v1.0.0] 第1页 共60页
 
 import { useCallback, useEffect, useState } from 'react';
 import type { CopyrightDocuments } from '../shared/api';
@@ -50,7 +50,7 @@ export default function App() {
   };
   const [activeTab, setActiveTab] = useState<'generate' | 'license' | 'help'>('generate');
   const [logExpanded, setLogExpanded] = useState(false);
-[软著文档助手 v1.0.0] 第2页 共60页
+[AI软著助手 v1.0.0] 第2页 共60页
 
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('ruanzhu-theme');
@@ -102,7 +102,7 @@ export default function App() {
       licensed: boolean;
       fileCount?: number;
       totalLines?: number;
-[软著文档助手 v1.0.0] 第3页 共60页
+[AI软著助手 v1.0.0] 第3页 共60页
 
       compliance?: any;
     }) => {
@@ -154,7 +154,7 @@ export default function App() {
               }}
               title="使用指南"
             >
-[软著文档助手 v1.0.0] 第4页 共60页
+[AI软著助手 v1.0.0] 第4页 共60页
 
               <span className="nav-icon">❓</span>
               <span className="nav-label">帮助指南</span>
@@ -206,7 +206,7 @@ export default function App() {
                       </div>
                       <div className="mini-log-body">
                         {logs.length > 0 ? (
-[软著文档助手 v1.0.0] 第5页 共60页
+[AI软著助手 v1.0.0] 第5页 共60页
 
                           logs.slice(0, 8).map((log, idx) => (
                             <div key={idx} className="mini-log-item">
@@ -234,7 +234,7 @@ export default function App() {
                       />
                     ) : (
                       <div className="welcome">
-                        <h2>软著文档助手</h2>
+                        <h2>AI软著助手</h2>
                         {!workspaceRoot && (
                           <>
                             <p>1. 点击上方「选择项目文件夹」以载入代码</p>
@@ -258,7 +258,7 @@ export default function App() {
                                   <p className="summary-status success"><b>🎉 恭喜！</b>项目通过了全部核心审查自检，未检测到任何可能影响软著过审的潜在合规问题。</p>
                                 ) : compliance.score >= 60 ? (
                                   <p className="summary-status warning"><b>⚠️ 建议核对：</b>自检分数为 <b>{compliance.score}分</b>。检测到一些可能面临版权中心补正风险的项，建议对照下方清单确认或整改代码后再点击排版生成。</p>
-[软著文档助手 v1.0.0] 第6页 共60页
+[AI软著助手 v1.0.0] 第6页 共60页
 
                                 ) : (
                                   <p className="summary-status error"><b>❌ 严重风险：</b>自检分数仅 <b>{compliance.score}分</b>。项目存在极高被版权中心下发补正或驳回材料的风险，请务必优先处理下方红色警示项！</p>
@@ -310,7 +310,7 @@ export default function App() {
                                     <div className="step-title">
                                       <span className="step-num-badge">第 {step.id} 步</span>
                                       <strong>{step.label}</strong>
-[软著文档助手 v1.0.0] 第7页 共60页
+[AI软著助手 v1.0.0] 第7页 共60页
 
                                     </div>
                                     <p className="step-desc">{step.desc}</p>
@@ -362,7 +362,7 @@ export interface CopyrightDocuments {
   manual: string;
   applicationForm: string;
 }
-[软著文档助手 v1.0.0] 第8页 共60页
+[AI软著助手 v1.0.0] 第8页 共60页
 
 export type SaveFormat = 'md' | 'txt' | 'docx' | 'pdf';
 export interface RuanzhuApi {
@@ -414,7 +414,7 @@ interface CopyrightPanelProps {
   onProjectNameChange: (v: string) => void;
   onVersionChange: (v: string) => void;
   onDocumentsGenerated: (docs: CopyrightDocuments) => void;
-[软著文档助手 v1.0.0] 第9页 共60页
+[AI软著助手 v1.0.0] 第9页 共60页
 
   onLogAdd: (msg: string) => void;
 }
@@ -466,7 +466,7 @@ export function CopyrightPanel({
     onLogAdd(`开始本地扫描并分析项目: "${projectName}" (版本: ${version})...`);
     try {
       const res = await window.ruanzhu.generateAll({
-[软著文档助手 v1.0.0] 第10页 共60页
+[AI软著助手 v1.0.0] 第10页 共60页
 
         projectName: projectName || '未命名软件',
         version: version || '1.0',
@@ -518,7 +518,7 @@ export function CopyrightPanel({
             disabled={isGenerating}
           />
         </label>
-[软著文档助手 v1.0.0] 第11页 共60页
+[AI软著助手 v1.0.0] 第11页 共60页
 
         <label>
           版本号
@@ -570,7 +570,7 @@ export function CopyrightPanel({
 .config-section label {
   display: block;
   margin-bottom: 16px;
-[软著文档助手 v1.0.0] 第12页 共60页
+[AI软著助手 v1.0.0] 第12页 共60页
 
   font-size: 13px;
   color: var(--text-muted);
@@ -622,7 +622,7 @@ export function CopyrightPanel({
   font-family: 'Outfit', sans-serif;
   font-weight: 600;
   font-size: 14px;
-[软著文档助手 v1.0.0] 第13页 共60页
+[AI软著助手 v1.0.0] 第13页 共60页
 
   letter-spacing: 0.5px;
   transition: all 0.4s ease;
@@ -674,7 +674,7 @@ export function CopyrightPanel({
   display: flex;
   justify-content: space-between;
   align-items: center;
-[软著文档助手 v1.0.0] 第14页 共60页
+[AI软著助手 v1.0.0] 第14页 共60页
 
   flex-wrap: wrap;
   gap: 12px;
@@ -726,7 +726,7 @@ export function CopyrightPanel({
   background: var(--bg-btn-hover);
   border-color: var(--border-input);
   color: var(--text-primary);
-[软著文档助手 v1.0.0] 第15页 共60页
+[AI软著助手 v1.0.0] 第15页 共60页
 
 }
 .actions button.btn-muted {
@@ -778,7 +778,7 @@ export function CopyrightPanel({
 .warning-banner {
   margin-bottom: 16px;
   padding: 12px;
-[软著文档助手 v1.0.0] 第16页 共60页
+[AI软著助手 v1.0.0] 第16页 共60页
 
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.25);
@@ -830,7 +830,7 @@ export function CopyrightPanel({
   align-items: center;
   gap: 8px;
   background: var(--bg-btn);
-[软著文档助手 v1.0.0] 第17页 共60页
+[AI软著助手 v1.0.0] 第17页 共60页
 
   border: 1px solid var(--border-color-light);
   padding: 6px 10px;
@@ -882,7 +882,7 @@ export function CopyrightPanel({
 .activate-box input:focus {
   outline: none;
   border-color: var(--accent-color);
-[软著文档助手 v1.0.0] 第18页 共60页
+[AI软著助手 v1.0.0] 第18页 共60页
 
   background: var(--bg-input-focus);
 }
@@ -934,7 +934,7 @@ export function CopyrightPanel({
   letter-spacing: 4px;
   white-space: nowrap;
   user-select: none;
-[软著文档助手 v1.0.0] 第19页 共60页
+[AI软著助手 v1.0.0] 第19页 共60页
 
 }
 .toast {
@@ -986,7 +986,7 @@ export function CopyrightPanel({
   font-size: 11px;
   color: var(--text-muted);
 }
-[软著文档助手 v1.0.0] 第20页 共60页
+[AI软著助手 v1.0.0] 第20页 共60页
 
 .qrcode-mock {
   width: 90px;
@@ -1038,7 +1038,7 @@ export function CopyrightPanel({
 .help-links {
   display: flex;
   flex-direction: column;
-[软著文档助手 v1.0.0] 第21页 共60页
+[AI软著助手 v1.0.0] 第21页 共60页
 
   gap: 10px;
   margin-bottom: 16px;
@@ -1090,7 +1090,7 @@ export function CopyrightPanel({
   display: flex;
   flex-direction: column;
   min-height: 180px;
-[软著文档助手 v1.0.0] 第22页 共60页
+[AI软著助手 v1.0.0] 第22页 共60页
 
   max-height: 300px;
 }
@@ -1142,7 +1142,7 @@ export function CopyrightPanel({
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color-light);
   padding: 4px 0;
-[软著文档助手 v1.0.0] 第23页 共60页
+[AI软著助手 v1.0.0] 第23页 共60页
 
   word-break: break-all;
 }
@@ -1194,7 +1194,7 @@ export function CopyrightPanel({
 .cost-detail {
   font-size: 11px;
   color: var(--text-muted);
-[软著文档助手 v1.0.0] 第24页 共60页
+[AI软著助手 v1.0.0] 第24页 共60页
 
   line-height: 1.4;
 }
@@ -1246,7 +1246,7 @@ export function CopyrightPanel({
   justify-content: center;
   align-items: center;
   gap: 8px;
-[软著文档助手 v1.0.0] 第25页 共60页
+[AI软著助手 v1.0.0] 第25页 共60页
 
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 4px;
@@ -1298,7 +1298,7 @@ export function CopyrightPanel({
   display: flex;
   flex-direction: column;
   overflow: hidden;
-[软著文档助手 v1.0.0] 第26页 共60页
+[AI软著助手 v1.0.0] 第26页 共60页
 
 }
 .generate-workspace {
@@ -1350,7 +1350,7 @@ export function CopyrightPanel({
   flex: 1;
   display: flex;
   flex-direction: column;
-[软著文档助手 v1.0.0] 第27页 共60页
+[AI软著助手 v1.0.0] 第27页 共60页
 
   min-height: 160px;
   max-height: 260px;
@@ -1402,7 +1402,7 @@ export function CopyrightPanel({
   padding-bottom: 2px;
 }
 .mini-log-empty {
-[软著文档助手 v1.0.0] 第28页 共60页
+[AI软著助手 v1.0.0] 第28页 共60页
 
   color: var(--text-muted);
   font-style: italic;
@@ -1454,7 +1454,7 @@ export function CopyrightPanel({
   font-weight: 500;
   margin-bottom: 8px;
 }
-[软著文档助手 v1.0.0] 第29页 共60页
+[AI软著助手 v1.0.0] 第29页 共60页
 
 .mode-toggle-group {
   display: flex;
@@ -1506,7 +1506,7 @@ export function CopyrightPanel({
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: 8px;
-[软著文档助手 v1.0.0] 第30页 共60页
+[AI软著助手 v1.0.0] 第30页 共60页
 
   padding: 10px 16px;
   margin-bottom: 12px;
@@ -1558,7 +1558,7 @@ export function CopyrightPanel({
   width: 320px;
   min-width: 320px;
   background: var(--bg-secondary);
-[软著文档助手 v1.0.0] 第31页 共60页
+[AI软著助手 v1.0.0] 第31页 共60页
 
   cursor: pointer;
   display: flex;
@@ -1610,7 +1610,7 @@ export function CopyrightPanel({
   animation: wechatGlow 2s infinite ease-in-out;
 }
 .qr-glow-frame.alipay {
-[软著文档助手 v1.0.0] 第32页 共60页
+[AI软著助手 v1.0.0] 第32页 共60页
 
   border: 2px solid #3b82f6;
   animation: alipayGlow 2s infinite ease-in-out;
@@ -1662,7 +1662,7 @@ export function CopyrightPanel({
   border: none;
   border-radius: 4px;
   font-size: 11px;
-[软著文档助手 v1.0.0] 第33页 共60页
+[AI软著助手 v1.0.0] 第33页 共60页
 
   font-weight: 600;
   cursor: pointer;
@@ -1714,7 +1714,7 @@ export function CopyrightPanel({
   color: var(--text-muted);
 }
 .price-amount {
-[软著文档助手 v1.0.0] 第34页 共60页
+[AI软著助手 v1.0.0] 第34页 共60页
 
   font-size: 18px;
   font-weight: 700;
@@ -1766,7 +1766,7 @@ export function CopyrightPanel({
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-[软著文档助手 v1.0.0] 第35页 共60页
+[AI软著助手 v1.0.0] 第35页 共60页
 
 }
 .btn-force-pay {
@@ -1818,7 +1818,7 @@ export function CopyrightPanel({
   align-items: center;
   margin-bottom: 20px;
   box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
-[软著文档助手 v1.0.0] 第36页 共60页
+[AI软著助手 v1.0.0] 第36页 共60页
 
   animation: successSplash 0.5s ease-out;
 }
@@ -1870,7 +1870,7 @@ export function CopyrightPanel({
 }
 .help-panel {
   display: flex;
-[软著文档助手 v1.0.0] 第37页 共60页
+[AI软著助手 v1.0.0] 第37页 共60页
 
   flex-direction: column;
   gap: 24px;
@@ -1922,7 +1922,7 @@ export function CopyrightPanel({
 .group-title {
   display: flex;
   align-items: center;
-[软著文档助手 v1.0.0] 第38页 共60页
+[AI软著助手 v1.0.0] 第38页 共60页
 
   gap: 10px;
   margin-bottom: 12px;
@@ -1974,7 +1974,7 @@ export function CopyrightPanel({
 }
 .checklist-items li::before {
   content: "•";
-[软著文档助手 v1.0.0] 第39页 共60页
+[AI软著助手 v1.0.0] 第39页 共60页
 
   position: absolute;
   left: 4px;
@@ -2026,7 +2026,7 @@ export function CopyrightPanel({
 }
 .help-guide ol {
   margin: 0;
-[软著文档助手 v1.0.0] 第40页 共60页
+[AI软著助手 v1.0.0] 第40页 共60页
 
   padding-left: 20px;
   display: flex;
@@ -2078,7 +2078,7 @@ export function CopyrightPanel({
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-color);
   border-radius: 50%;
-[软著文档助手 v1.0.0] 第41页 共60页
+[AI软著助手 v1.0.0] 第41页 共60页
 
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
 }
@@ -2130,7 +2130,7 @@ export function CopyrightView({
   onTabChange,
 }: CopyrightViewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('source');
-[软著文档助手 v1.0.0] 第42页 共60页
+[AI软著助手 v1.0.0] 第42页 共60页
 
   const [toast, setToast] = useState('');
   const [sourceCode, setSourceCode] = useState('');
@@ -2182,7 +2182,7 @@ export function CopyrightView({
     if (res.ok) {
       onLogAdd(`图片插槽 [${slotKey}] 序号 ${index} 已删除`);
       showToast('截图已删除');
-[软著文档助手 v1.0.0] 第43页 共60页
+[AI软著助手 v1.0.0] 第43页 共60页
 
       await loadScreenshots();
     } else {
@@ -2234,7 +2234,7 @@ export function CopyrightView({
             index = match.index;
             break;
           }
-[软著文档助手 v1.0.0] 第44页 共60页
+[AI软著助手 v1.0.0] 第44页 共60页
 
         }
         if (index !== -1) {
@@ -2286,7 +2286,7 @@ export function CopyrightView({
   };
   const handleExport = async (format: 'md' | 'docx' | 'txt' | 'pdf') => {
     if (!licensed) {
-[软著文档助手 v1.0.0] 第45页 共60页
+[AI软著助手 v1.0.0] 第45页 共60页
 
       handleUnlicensedExport();
       return;
@@ -2338,7 +2338,7 @@ export function CopyrightView({
             <button
               key={key}
               type="button"
-[软著文档助手 v1.0.0] 第46页 共60页
+[AI软著助手 v1.0.0] 第46页 共60页
 
               className={activeTab === key ? 'active' : ''}
               onClick={() => setActiveTab(key)}
@@ -2390,7 +2390,7 @@ export function CopyrightView({
               导出 Word{licensed ? '' : ' 🔒'}
             </button>
           )}
-[软著文档助手 v1.0.0] 第47页 共60页
+[AI软著助手 v1.0.0] 第47页 共60页
 
           <button
             type="button"
@@ -2442,7 +2442,7 @@ export function CopyrightView({
               <div className="screenshot-slots">
                 {SLOTS.map((slot) => {
                   const imgList = screenshots[slot.key] || [];
-[软著文档助手 v1.0.0] 第48页 共60页
+[AI软著助手 v1.0.0] 第48页 共60页
 
                   return (
                     <div
@@ -2494,7 +2494,7 @@ export function CopyrightView({
                         ))}
                         <div
                           className="screenshot-add-card"
-[软著文档助手 v1.0.0] 第49页 共60页
+[AI软著助手 v1.0.0] 第49页 共60页
 
                           onClick={() => document.getElementById(`file-input-${slot.key}-add`)?.click()}
                         >
@@ -2546,7 +2546,7 @@ interface PaymentModalProps {
   onSuccess: (licenseKey: string) => void;
   onLogAdd: (msg: string) => void;
 }
-[软著文档助手 v1.0.0] 第50页 共60页
+[AI软著助手 v1.0.0] 第50页 共60页
 
 export function PaymentModal({
   workspaceRoot,
@@ -2598,7 +2598,7 @@ export function PaymentModal({
     if (!orderId) return;
     try {
       const res = await window.ruanzhu.queryOrder(orderId, force);
-[软著文档助手 v1.0.0] 第51页 共60页
+[AI软著助手 v1.0.0] 第51页 共60页
 
       if (res.ok && res.status === 'paid' && res.licenseKey) {
         stopPolling();
@@ -2650,7 +2650,7 @@ export function PaymentModal({
       pollIntervalRef.current = null;
     }
     if (countdownIntervalRef.current) {
-[软著文档助手 v1.0.0] 第52页 共60页
+[AI软著助手 v1.0.0] 第52页 共60页
 
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
@@ -2702,7 +2702,7 @@ export function PaymentModal({
             <div className="modal-body">
               <div className="qr-container-wrapper">
                 <div className={`qr-glow-frame ${method}`}>
-[软著文档助手 v1.0.0] 第53页 共60页
+[AI软著助手 v1.0.0] 第53页 共60页
 
                   {status === 'creating' && (
                     <div className="qr-loading">
@@ -2754,7 +2754,7 @@ export function PaymentModal({
               )}
             </div>
             <div className="modal-footer">
-[软著文档助手 v1.0.0] 第54页 共60页
+[AI软著助手 v1.0.0] 第54页 共60页
 
               <p className="safe-tips">🛡️ 本产品使用沙箱/真实当面付双重机制。如您处于测试环境，可等待倒计时完毕或点击下方按钮直接模拟成功付款。</p>
               <div className="footer-actions">
@@ -2806,7 +2806,7 @@ export function LicensePanel({
     if (!workspaceRoot) return;
     setMessage('');
     onLogAdd(`尝试使用激活码 "${licenseKey}" 激活当前项目...`);
-[软著文档助手 v1.0.0] 第55页 共60页
+[AI软著助手 v1.0.0] 第55页 共60页
 
     const res = await window.ruanzhu.activateLicense({
       root: workspaceRoot,
@@ -2858,7 +2858,7 @@ export function LicensePanel({
         <span className="label">项目指纹:</span>
         <code className="fingerprint-value">{fingerprint}</code>
         <button type="button" className="btn-copy" onClick={handleCopyFingerprint}>
-[软著文档助手 v1.0.0] 第56页 共60页
+[AI软著助手 v1.0.0] 第56页 共60页
 
           {copied ? '已复制' : '复制'}
         </button>
@@ -2910,7 +2910,7 @@ export function LicensePanel({
       )}
       {message && <small className="license-msg">{message}</small>}
       {showPayment && (
-[软著文档助手 v1.0.0] 第57页 共60页
+[AI软著助手 v1.0.0] 第57页 共60页
 
         <PaymentModal
           workspaceRoot={workspaceRoot}
@@ -2943,7 +2943,7 @@ export function ProjectBar({ workspaceRoot, theme, onToggleTheme, onFolderSelect
     <header className="project-bar">
       <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <img src={logo} alt="Logo" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-        软著文档助手
+        AI软著助手
       </div>
       <button type="button" className="btn-primary" onClick={() => void handleSelect()}>
         选择项目文件夹
@@ -2962,7 +2962,7 @@ export function ProjectBar({ workspaceRoot, theme, onToggleTheme, onFolderSelect
     </header>
   );
 }
-[软著文档助手 v1.0.0] 第58页 共60页
+[AI软著助手 v1.0.0] 第58页 共60页
 
 interface HelpPanelProps {
   onLogAdd: (msg: string) => void;
@@ -3014,7 +3014,7 @@ export function HelpPanel({ onLogAdd }: HelpPanelProps) {
           </div>
           <div className="checklist-group">
             <div className="group-title">
-[软著文档助手 v1.0.0] 第59页 共60页
+[AI软著助手 v1.0.0] 第59页 共60页
 
               <span className="badge badge-secondary">您需要自行准备</span>
               <h5>2. 申请人主体身份证明文件 (必须提供)</h5>
@@ -3066,7 +3066,7 @@ export function HelpPanel({ onLogAdd }: HelpPanelProps) {
             rel="noreferrer"
             className="help-link-item"
             onClick={() => handleLinkClick('计算机软件著作权登记指南')}
-[软著文档助手 v1.0.0] 第60页 共60页
+[AI软著助手 v1.0.0] 第60页 共60页
 
           >
             📘 CCPC 计算机软件著作权登记指南 ↗

@@ -144,16 +144,6 @@ export function HelpPanel({ onLogAdd }: HelpPanelProps) {
         </div>
       </div>
 
-      <div className="help-section margin-top">
-        <h4>💡 本软件快速使用指引</h4>
-        <div className="help-guide">
-          <ol>
-            <li>选择项目代码文件夹，系统将自动扫描并显示文件数、行数并计算<b>“项目特征指纹”</b>。</li>
-            <li>配置大模型 API Key（用于深入理解代码逻辑），点击<b>“一键提取与排版”</b>开始后台格式化与大纲分析。</li>
-            <li>在右侧的“说明书截图管理”中上传软件运行截图，点击<b>“一键导出全部”</b>即可直接生成并导出免水印的 Word / PDF / Markdown 申报材料！</li>
-          </ol>
-        </div>
-      </div>
     </div>
   );
 }

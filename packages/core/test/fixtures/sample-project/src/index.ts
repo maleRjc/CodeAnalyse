@@ -1,9 +1,9 @@
-export function main(): string {
-  return 'hello';
+export function formatString(str: string): string {
+  return str.trim().toLowerCase();
 }
 
-export class AppService {
-  run(): void {
-    console.log('run');
+export class TextProcessor {
+  process(input: string): string {
+    return formatString(input);
   }
 }

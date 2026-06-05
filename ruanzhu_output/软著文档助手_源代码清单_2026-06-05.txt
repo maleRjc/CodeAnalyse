@@ -1,0 +1,3120 @@
+[软著文档助手 v1.0.0] 第1页 共60页
+
+import { useCallback, useEffect, useState } from 'react';
+import type { CopyrightDocuments } from '../shared/api';
+import { CopyrightPanel } from './components/CopyrightPanel';
+import { CopyrightView } from './components/CopyrightView';
+import { LicensePanel } from './components/LicensePanel';
+import { ProjectBar } from './components/ProjectBar';
+import { HelpPanel } from './components/HelpPanel';
+import { LogPanel } from './components/LogPanel';
+function api() {
+  const bridge = window.ruanzhu;
+  if (!bridge) throw new Error('预加载桥接未就绪');
+  return bridge;
+}
+export default function App() {
+  const [workspaceRoot, setWorkspaceRoot] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState('');
+  const [version, setVersion] = useState('1.0');
+  const [fingerprint, setFingerprint] = useState('');
+  const [licensed, setLicensed] = useState(false);
+  const [documents, setDocuments] = useState<CopyrightDocuments | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [fileCount, setFileCount] = useState<number | undefined>(undefined);
+  const [totalLines, setTotalLines] = useState<number | undefined>(undefined);
+  const [compliance, setCompliance] = useState<any | null>(null);
+  const [wizardSteps, setWizardSteps] = useState<{ id: number; label: string; desc: string; done: boolean }[]>(() => {
+    const saved = localStorage.getItem('ruanzhu-wizard-steps');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+      }
+    }
+    return [
+      { id: 1, label: '代码扫描与文档生成', desc: '选择项目目录，进行合规性扫描，上传截图并生成Word材料。', done: false },
+      { id: 2, label: '版权中心账号实名认证', desc: '前往中国版权保护中心官网进行账号注册并提交身份（个人/企业）实名认证。', done: false },
+      { id: 3, label: '在线填报申请信息', desc: '在官网选择“软件著作权登记申请”，并根据本软件「申请表格」生成的数据进行填写。', done: false },
+      { id: 4, label: '上传电子版鉴别材料', desc: '在官网上传本工具排版导出的「源代码清单.pdf」和「软件说明书.docx/pdf」。', done: false },
+      { id: 5, label: '确认单电子签名或盖章', desc: '下载系统生成的申请确认单，个人手写签名或企业加盖公章，扫描后重新上传至官网。', done: false },
+      { id: 6, label: '等待官方受理与发证', desc: '提交审核，等待版权中心审核（通常20-30个工作日），通过后即可获取电子证书。', done: false },
+    ];
+  });
+  const toggleWizardStep = (id: number) => {
+    setWizardSteps((prev) => {
+      const next = prev.map((step) => (step.id === id ? { ...step, done: !step.done } : step));
+      localStorage.setItem('ruanzhu-wizard-steps', JSON.stringify(next));
+      return next;
+    });
+  };
+  const [activeTab, setActiveTab] = useState<'generate' | 'license' | 'help'>('generate');
+  const [logExpanded, setLogExpanded] = useState(false);
+[软著文档助手 v1.0.0] 第2页 共60页
+
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const saved = localStorage.getItem('ruanzhu-theme');
+    return (saved as 'dark' | 'light') || 'dark';
+  });
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('ruanzhu-theme', theme);
+  }, [theme]);
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
+  const addLog = useCallback((msg: string) => {
+    const time = new Date().toTimeString().slice(0, 8);
+    setLogs((prev) => [`[${time}] ${msg}`, ...prev].slice(0, 50));
+  }, []);
+  useEffect(() => {
+    void api()
+      .getProject()
+      .then(async (root) => {
+        if (root) {
+          setWorkspaceRoot(root);
+          addLog(`检测到上次工作目录: ${root}`);
+          try {
+            const info = await api().selectFolder();
+            if (info) {
+              setWorkspaceRoot(info.root);
+              setProjectName(info.name);
+              setVersion(info.version);
+              setFingerprint(info.fingerprint);
+              setLicensed(info.licensed);
+              setFileCount(info.fileCount);
+              setTotalLines(info.totalLines);
+              setCompliance(info.compliance || null);
+              addLog(`已载入项目 "${info.name}" (指纹: ${info.fingerprint})`);
+            }
+          } catch (err) {
+            console.error('Auto-load select folder failed:', err);
+          }
+        }
+      });
+  }, [addLog]);
+  const handleFolderSelected = useCallback(
+    (info: {
+      root: string;
+      name: string;
+      version: string;
+      fingerprint: string;
+      licensed: boolean;
+      fileCount?: number;
+      totalLines?: number;
+[软著文档助手 v1.0.0] 第3页 共60页
+
+      compliance?: any;
+    }) => {
+      setWorkspaceRoot(info.root);
+      setProjectName(info.name);
+      setVersion(info.version);
+      setFingerprint(info.fingerprint);
+      setLicensed(info.licensed);
+      setFileCount(info.fileCount);
+      setTotalLines(info.totalLines);
+      setCompliance(info.compliance || null);
+      setDocuments(null);
+      addLog(`已载入项目 "${info.name}" (目录: ${info.root}, 指纹: ${info.fingerprint})`);
+    },
+    [addLog],
+  );
+  return (
+    <div className="app">
+      <ProjectBar
+        workspaceRoot={workspaceRoot}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onFolderSelected={handleFolderSelected}
+      />
+      <div className="app-body">
+        {}
+        <aside className="nav-sidebar">
+          <div className="nav-items">
+            <button
+              type="button"
+              className={`nav-item ${activeTab === 'generate' && !logExpanded ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('generate');
+                setLogExpanded(false);
+              }}
+              title="配置与生成"
+            >
+              <span className="nav-icon">📝</span>
+              <span className="nav-label">配置生成</span>
+            </button>
+            {}
+            {}
+            <button
+              type="button"
+              className={`nav-item ${activeTab === 'help' && !logExpanded ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('help');
+                setLogExpanded(false);
+              }}
+              title="使用指南"
+            >
+[软著文档助手 v1.0.0] 第4页 共60页
+
+              <span className="nav-icon">❓</span>
+              <span className="nav-label">帮助指南</span>
+            </button>
+          </div>
+          <div className="nav-footer">
+            <button
+              type="button"
+              className={`nav-item btn-log ${logExpanded ? 'active' : ''}`}
+              onClick={() => setLogExpanded(!logExpanded)}
+              title="运行日志"
+            >
+              <span className="nav-icon">🖥️</span>
+              <span className="nav-label">运行日志</span>
+            </button>
+          </div>
+        </aside>
+        {}
+        <main className="main-workspace">
+          {logExpanded ? (
+            <div className="workspace-log-view">
+              <LogPanel logs={logs} onClear={() => setLogs([])} />
+            </div>
+          ) : (
+            <div className="workspace-content">
+              {activeTab === 'generate' && (
+                <div className="generate-workspace">
+                  <div className="generate-config-aside">
+                    <CopyrightPanel
+                      workspaceRoot={workspaceRoot}
+                      projectName={projectName}
+                      version={version}
+                      fileCount={fileCount}
+                      totalLines={totalLines}
+                      onProjectNameChange={setProjectName}
+                      onVersionChange={setVersion}
+                      onDocumentsGenerated={setDocuments}
+                      onLogAdd={addLog}
+                    />
+                    {}
+                    <div className="generate-mini-log">
+                      <div className="mini-log-header">
+                        <span>实时日志</span>
+                        {logs.length > 0 && (
+                          <button className="btn-clear-mini" onClick={() => setLogs([])}>
+                            清空
+                          </button>
+                        )}
+                      </div>
+                      <div className="mini-log-body">
+                        {logs.length > 0 ? (
+[软著文档助手 v1.0.0] 第5页 共60页
+
+                          logs.slice(0, 8).map((log, idx) => (
+                            <div key={idx} className="mini-log-item">
+                              {log}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="mini-log-empty">暂无运行记录</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="generate-preview-main">
+                    {documents ? (
+                      <CopyrightView
+                        documents={documents}
+                        projectName={projectName || '未命名软件'}
+                        version={version}
+                        licensed={licensed}
+                        fingerprint={fingerprint}
+                        workspaceRoot={workspaceRoot}
+                        onLicenseChange={setLicensed}
+                        onLogAdd={addLog}
+                        onTabChange={setActiveTab}
+                      />
+                    ) : (
+                      <div className="welcome">
+                        <h2>软著文档助手</h2>
+                        {!workspaceRoot && (
+                          <>
+                            <p>1. 点击上方「选择项目文件夹」以载入代码</p>
+                            <p>2. 在左侧面板配置大模型 API Key，以便分析底层代码逻辑</p>
+                            <p>3. 点击「一键提取与排版」，系统将自动排版 60 页源代码并提取文档大纲</p>
+                            <p>4. 预览并导出 Word 后，请务必手动贴入 UI 截图并完善说明内容</p>
+                          </>
+                        )}
+                        {compliance && (
+                          <div className="compliance-report">
+                            <h3>🔍 代码合规性自检报告</h3>
+                            <div className="compliance-header">
+                              <div className="compliance-score-box">
+                                <span className="score-num" style={{ color: compliance.score >= 80 ? '#22c55e' : compliance.score >= 60 ? '#f59e0b' : '#ef4444' }}>
+                                  {compliance.score}
+                                </span>
+                                <span className="score-label">综合合规分</span>
+                              </div>
+                              <div className="compliance-summary">
+                                {compliance.score === 100 ? (
+                                  <p className="summary-status success"><b>🎉 恭喜！</b>项目通过了全部核心审查自检，未检测到任何可能影响软著过审的潜在合规问题。</p>
+                                ) : compliance.score >= 60 ? (
+                                  <p className="summary-status warning"><b>⚠️ 建议核对：</b>自检分数为 <b>{compliance.score}分</b>。检测到一些可能面临版权中心补正风险的项，建议对照下方清单确认或整改代码后再点击排版生成。</p>
+[软著文档助手 v1.0.0] 第6页 共60页
+
+                                ) : (
+                                  <p className="summary-status error"><b>❌ 严重风险：</b>自检分数仅 <b>{compliance.score}分</b>。项目存在极高被版权中心下发补正或驳回材料的风险，请务必优先处理下方红色警示项！</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="compliance-issues-list">
+                              {compliance.issues.map((issue: any, index: number) => (
+                                <div key={index} className={`compliance-issue-card ${issue.type}`}>
+                                  <div className="issue-title-bar">
+                                    <span className={`issue-tag badge-${issue.type}`}>
+                                      {issue.type === 'error' ? '严重隐患' : issue.type === 'warning' ? '合规风险' : '合规建议'}
+                                    </span>
+                                    <strong>{issue.message}</strong>
+                                  </div>
+                                  {issue.details && <p className="issue-details">{issue.details}</p>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {workspaceRoot && (
+                          <div className="filing-wizard">
+                            <h3>🗺️ 软著申报全流程向导时间轴</h3>
+                            <div className="wizard-progress-bar-container">
+                              <div className="wizard-progress-text">
+                                填报进度：<b>{wizardSteps.filter((s) => s.done).length} / {wizardSteps.length}</b> 已完成
+                              </div>
+                              <div className="wizard-progress-bar-track">
+                                <div
+                                  className="wizard-progress-bar-fill"
+                                  style={{ width: `${(wizardSteps.filter((s) => s.done).length / wizardSteps.length) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div className="wizard-timeline">
+                              {wizardSteps.map((step) => (
+                                <div key={step.id} className={`wizard-step-node ${step.done ? 'done' : ''}`}>
+                                  <div className="step-check-col">
+                                    <input
+                                      type="checkbox"
+                                      checked={step.done}
+                                      onChange={() => toggleWizardStep(step.id)}
+                                      id={`wizard-checkbox-${step.id}`}
+                                    />
+                                    <label htmlFor={`wizard-checkbox-${step.id}`} className="checkbox-custom-label" />
+                                  </div>
+                                  <div className="step-info-col">
+                                    <div className="step-title">
+                                      <span className="step-num-badge">第 {step.id} 步</span>
+                                      <strong>{step.label}</strong>
+[软著文档助手 v1.0.0] 第7页 共60页
+
+                                    </div>
+                                    <p className="step-desc">{step.desc}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="welcome-fingerprint-tip" style={{ marginTop: '20px' }}>
+                          {workspaceRoot ? (
+                            <span>
+                              当前项目特征指纹: <code>{fingerprint}</code> (已激活)
+                            </span>
+                          ) : (
+                            <span>请先导入您的项目文件夹</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {activeTab === 'license' && (
+                <div className="license-workspace">
+                  <LicensePanel
+                    workspaceRoot={workspaceRoot}
+                    fingerprint={fingerprint}
+                    licensed={licensed}
+                    onLicenseChange={setLicensed}
+                    onLogAdd={addLog}
+                  />
+                </div>
+              )}
+              {activeTab === 'help' && (
+                <div className="help-workspace">
+                  <HelpPanel onLogAdd={addLog} />
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+export interface CopyrightDocuments {
+  sourceCode: string;
+  manual: string;
+  applicationForm: string;
+}
+[软著文档助手 v1.0.0] 第8页 共60页
+
+export type SaveFormat = 'md' | 'txt' | 'docx' | 'pdf';
+export interface RuanzhuApi {
+  selectFolder: () => Promise<{
+    root: string;
+    name: string;
+    version: string;
+    fingerprint: string;
+    licensed: boolean;
+    fileCount?: number;
+    totalLines?: number;
+  } | null>;
+  getProject: () => Promise<string | null>;
+  getLicenseStatus: (payload: { root: string; fingerprint: string }) => Promise<{ licensed: boolean }>;
+  activateLicense: (payload: { root: string; fingerprint: string; key: string }) => Promise<{ ok: boolean; error?: string }>;
+  deactivateLicense: (payload: { root: string }) => Promise<{ ok: boolean }>;
+  onProgress: (callback: (message: string) => void) => () => void;
+  cancelGenerate: () => Promise<{ ok: boolean }>;
+  generateAll: (opts: {
+    projectName: string;
+    version: string;
+    mode?: 'local';
+  }) => Promise<{ ok: boolean; documents?: CopyrightDocuments; error?: string }>;
+  exportAll: (payload: {
+    documents: CopyrightDocuments;
+    projectName: string;
+    version?: string;
+  }) => Promise<{ ok: boolean; path?: string; licensed?: boolean; error?: string }>;
+  saveFile: (payload: {
+    content: string;
+    defaultName: string;
+    format: SaveFormat;
+  }) => Promise<{ ok: boolean; path?: string; error?: string }>;
+  createOrder: (fingerprint: string, method: 'wechat' | 'alipay') => Promise<{ ok: boolean; orderId?: string; qrUrl?: string; error?: string }>;
+  queryOrder: (orderId: string) => Promise<{ ok: boolean; status: 'pending' | 'paid'; licenseKey?: string; error?: string }>;
+  uploadScreenshot: (slotName: string, index: number, buffer: ArrayBuffer | null) => Promise<{ ok: boolean; error?: string }>;
+  getScreenshots: () => Promise<{ ok: boolean; screenshots: Record<string, string[]>; error?: string }>;
+  downloadTemplate: (payload: { templateType: 'cooperative' | 'commissioned' }) => Promise<{ ok: boolean; filePath?: string; error?: string }>;
+}
+import { useEffect, useState } from 'react';
+import '../styles/copyright-panel.css';
+import type { CopyrightDocuments } from '../../shared/api';
+interface CopyrightPanelProps {
+  workspaceRoot: string | null;
+  projectName: string;
+  version: string;
+  fileCount?: number;
+  totalLines?: number;
+  onProjectNameChange: (v: string) => void;
+  onVersionChange: (v: string) => void;
+  onDocumentsGenerated: (docs: CopyrightDocuments) => void;
+[软著文档助手 v1.0.0] 第9页 共60页
+
+  onLogAdd: (msg: string) => void;
+}
+export function CopyrightPanel({
+  workspaceRoot,
+  projectName,
+  version,
+  fileCount,
+  totalLines,
+  onProjectNameChange,
+  onVersionChange,
+  onDocumentsGenerated,
+  onLogAdd,
+}: CopyrightPanelProps) {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState('');
+  const [error, setError] = useState('');
+  const [aiWarning, setAiWarning] = useState('');
+  const est = (() => {
+    if (!workspaceRoot) {
+      return {
+        text: '当前项目：未载入',
+        detail: '请先选择项目文件夹。',
+        advice: '💡 提示：点击上方按钮导入需要排版的代码文件夹。',
+      };
+    }
+    const lines = totalLines ?? 0;
+    const files = fileCount ?? 0;
+    return {
+      text: '本地直接生成：免费',
+      detail: `当前扫描到 ${files} 个文件，共 ${lines} 行代码。`,
+      advice: '💡 本地模式使用纯本地静态规则进行代码清理、挑选及 60 页分段排版，不依赖外部大模型接口。',
+    };
+  })();
+  useEffect(() => {
+    if (!isGenerating) return;
+    const unsubscribe = window.ruanzhu.onProgress((message) => setProgress(message));
+    return unsubscribe;
+  }, [isGenerating]);
+  const handleGenerate = async () => {
+    if (!workspaceRoot) {
+      setError('请先选择项目文件夹');
+      return;
+    }
+    setError('');
+    setAiWarning('');
+    setIsGenerating(true);
+    setProgress('准备中…');
+    onLogAdd(`开始本地扫描并分析项目: "${projectName}" (版本: ${version})...`);
+    try {
+      const res = await window.ruanzhu.generateAll({
+[软著文档助手 v1.0.0] 第10页 共60页
+
+        projectName: projectName || '未命名软件',
+        version: version || '1.0',
+        mode: 'local',
+      });
+      if (!res.ok || !res.documents) {
+        setError(res.error ?? '生成失败');
+        onLogAdd(`生成失败: ${res.error ?? '未知错误'}`);
+        return;
+      }
+      onDocumentsGenerated(res.documents);
+      onLogAdd(`本地代码排版与文档大纲提取成功! 请在预览区核对内容并【手动补充软件截图】。`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setError(errMsg);
+      onLogAdd(`生成失败: ${errMsg}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  const handleCancel = () => {
+    void window.ruanzhu.cancelGenerate();
+    setProgress('正在取消…');
+    onLogAdd(`已发送取消生成信号。`);
+  };
+  return (
+    <div className="copyright-panel">
+      <h3>软著配置</h3>
+      <div className="config-section">
+        {}
+        <div className="cost-estimator-panel">
+          <div className="estimator-title">本地扫描概况</div>
+          {workspaceRoot ? (
+            <div className="estimator-body">
+              <div className="cost-value">{est.text}</div>
+              <div className="cost-detail">{est.detail}</div>
+              <div className="cost-advice">{est.advice}</div>
+            </div>
+          ) : (
+            <div className="estimator-placeholder">请先选择项目文件夹以载入信息</div>
+          )}
+        </div>
+        <label>
+          软件名称
+          <input
+            value={projectName}
+            onChange={(e) => onProjectNameChange(e.target.value)}
+            placeholder="自动检测或手动输入"
+            disabled={isGenerating}
+          />
+        </label>
+[软著文档助手 v1.0.0] 第11页 共60页
+
+        <label>
+          版本号
+          <input
+            value={version}
+            onChange={(e) => onVersionChange(e.target.value)}
+            placeholder="1.0"
+            disabled={isGenerating}
+          />
+        </label>
+      </div>
+      {error && <div className="error-banner">{error}</div>}
+      {aiWarning && <div className="warning-banner">{aiWarning}</div>}
+      <button
+        type="button"
+        onClick={() => void handleGenerate()}
+        disabled={isGenerating || !workspaceRoot}
+        className="generate-btn"
+      >
+        {isGenerating ? '正在排版提取中…' : '💻 一键本地排版与生成'}
+      </button>
+      {isGenerating && (
+        <>
+          <div className="progress">{progress}</div>
+          <button type="button" className="cancel-btn" onClick={handleCancel}>
+            取消
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+.copyright-panel {
+  padding: 24px;
+  background: transparent;
+  color: var(--text-muted);
+}
+.copyright-panel h3 {
+  margin: 0 0 20px 0;
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+}
+.config-section {
+  margin-bottom: 24px;
+}
+.config-section label {
+  display: block;
+  margin-bottom: 16px;
+[软著文档助手 v1.0.0] 第12页 共60页
+
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.config-section input,
+.config-section select {
+  width: 100%;
+  padding: 10px 14px;
+  margin-top: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  color: var(--text-primary);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+.config-section input:focus,
+.config-section select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 12px var(--accent-btn-shadow);
+  background: var(--bg-input-focus);
+}
+.config-section small {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.config-section a {
+  color: var(--accent-color);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.config-section a:hover {
+  color: var(--text-primary);
+}
+.generate-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--accent-gradient);
+  background-size: 200% auto;
+  color: var(--text-dark);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+[软著文档助手 v1.0.0] 第13页 共60页
+
+  letter-spacing: 0.5px;
+  transition: all 0.4s ease;
+  box-shadow: 0 4px 20px var(--accent-btn-shadow);
+}
+.generate-btn:hover:not(:disabled) {
+  background-position: right center;
+  box-shadow: 0 6px 24px var(--accent-btn-shadow);
+  transform: translateY(-1px);
+}
+.generate-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.generate-btn:disabled {
+  background: var(--bg-btn);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+  border: 1px solid var(--border-color-light);
+  opacity: 0.6;
+}
+.progress {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(0, 242, 254, 0.05);
+  border: 1px solid rgba(0, 242, 254, 0.15);
+  border-radius: 8px;
+  color: var(--accent-color);
+  text-align: center;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  animation: pulse 2s infinite ease-in-out;
+}
+@keyframes pulse {
+  0% { opacity: 0.7; box-shadow: 0 0 4px rgba(0, 242, 254, 0.1); }
+  50% { opacity: 1; box-shadow: 0 0 12px rgba(0, 242, 254, 0.35); }
+  100% { opacity: 0.7; box-shadow: 0 0 4px rgba(0, 242, 254, 0.1); }
+}
+.copyright-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  transition: background 0.3s ease;
+}
+.copyright-view .toolbar {
+  border-bottom: 1px solid var(--border-color);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+[软著文档助手 v1.0.0] 第14页 共60页
+
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--bg-secondary);
+  transition: background 0.3s ease;
+}
+.tabs {
+  display: flex;
+  gap: 6px;
+}
+.tabs button {
+  padding: 8px 16px;
+  background: var(--bg-tab);
+  border: 1px solid var(--border-color-light);
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.tabs button:hover {
+  background: var(--bg-tab-hover);
+  color: var(--text-primary);
+}
+.tabs button.active {
+  background: var(--bg-tab-active);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+.actions button {
+  padding: 8px 14px;
+  background: var(--bg-btn);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.actions button:hover {
+  background: var(--bg-btn-hover);
+  border-color: var(--border-input);
+  color: var(--text-primary);
+[软著文档助手 v1.0.0] 第15页 共60页
+
+}
+.actions button.btn-muted {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.actions button.btn-muted:hover {
+  background: var(--bg-btn);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  opacity: 0.45;
+}
+.copyright-view .content {
+  flex: 1;
+  overflow: hidden;
+  padding: 24px;
+  position: relative;
+}
+.document-editor {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 24px;
+  resize: none;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.document-editor:focus {
+  border-color: var(--accent-color);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.1), 0 0 15px var(--accent-btn-shadow);
+  background: var(--bg-input-focus);
+}
+.error-banner {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 6px;
+  color: #FCA5A5;
+  font-size: 12px;
+}
+.warning-banner {
+  margin-bottom: 16px;
+  padding: 12px;
+[软著文档助手 v1.0.0] 第16页 共60页
+
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 6px;
+  color: #FDE047;
+  font-size: 12px;
+}
+.cancel-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+.cancel-btn:hover {
+  border-color: var(--border-input);
+  color: var(--text-primary);
+  background: var(--bg-btn);
+}
+.license-panel,
+.batch-panel {
+  padding: 24px;
+  border-top: 1px solid var(--border-color);
+  background: transparent;
+}
+.license-panel h4,
+.batch-panel h4 {
+  margin: 0 0 14px;
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+}
+.license-status {
+  font-size: 13px;
+  margin: 0 0 14px;
+  color: var(--text-muted);
+}
+.license-status strong {
+  color: var(--accent-color);
+}
+.fingerprint-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-btn);
+[软著文档助手 v1.0.0] 第17页 共60页
+
+  border: 1px solid var(--border-color-light);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+.fingerprint-box .label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.fingerprint-box .fingerprint-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fingerprint-box .btn-copy {
+  padding: 2px 6px;
+  background: var(--bg-btn);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.fingerprint-box .btn-copy:hover {
+  background: var(--bg-btn-hover);
+  color: var(--text-primary);
+}
+.activate-box {
+  display: flex;
+  gap: 8px;
+}
+.activate-box input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  color: var(--text-primary);
+  border-radius: 6px;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+.activate-box input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+[软著文档助手 v1.0.0] 第18页 共60页
+
+  background: var(--bg-input-focus);
+}
+.btn-secondary {
+  padding: 8px 14px;
+  background: var(--accent-gradient);
+  color: var(--text-dark);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+}
+.btn-deactivate {
+  width: 100%;
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #FCA5A5;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+.btn-deactivate:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+}
+.license-msg {
+  display: block;
+  margin-top: 10px;
+  color: var(--accent-color);
+  font-size: 12px;
+}
+.watermark-overlay {
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  z-index: 10;
+  font-size: 3rem;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  color: var(--text-muted);
+  opacity: 0.03;
+  letter-spacing: 4px;
+  white-space: nowrap;
+  user-select: none;
+[软著文档助手 v1.0.0] 第19页 共60页
+
+}
+.toast {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  background: var(--bg-input-focus);
+  border: 1px solid var(--accent-color);
+  box-shadow: 0 10px 30px var(--accent-btn-shadow);
+  color: var(--text-primary);
+  font-size: 13px;
+  border-radius: 8px;
+  z-index: 100;
+  animation: slideUp 0.3s ease-out;
+}
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.payment-area {
+  margin-top: 16px;
+  background: var(--bg-btn);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 14px;
+}
+.payment-title {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+.payment-qrcodes {
+  display: flex;
+  justify-content: space-around;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.qrcode-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.qrcode-box small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+[软著文档助手 v1.0.0] 第20页 共60页
+
+.qrcode-mock {
+  width: 90px;
+  height: 90px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border-color-light);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.qrcode-mock.wechat {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+.qrcode-mock.alipay {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+.qrcode-icon {
+  font-size: 1.4rem;
+}
+.payment-tip {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  margin: 0;
+  border-top: 1px solid var(--border-color-light);
+  padding-top: 8px;
+}
+.help-panel {
+  padding: 24px;
+  border-top: 1px solid var(--border-color);
+  background: transparent;
+}
+.help-panel h4 {
+  margin: 0 0 14px;
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+}
+.help-links {
+  display: flex;
+  flex-direction: column;
+[软著文档助手 v1.0.0] 第21页 共60页
+
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.help-link-item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: var(--accent-color);
+  text-decoration: none;
+  background: var(--bg-btn);
+  border: 1px solid var(--border-color-light);
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.help-link-item:hover {
+  background: var(--bg-tab-active);
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+  transform: translateX(2px);
+}
+.help-guide {
+  background: var(--bg-tab);
+  border: 1px solid var(--border-color-light);
+  padding: 12px;
+  border-radius: 8px;
+}
+.help-guide h5 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+.help-guide ol {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.help-guide li {
+  margin-bottom: 6px;
+}
+.log-panel {
+  padding: 24px;
+  border-top: 1px solid var(--border-color);
+  background: transparent;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 180px;
+[软著文档助手 v1.0.0] 第22页 共60页
+
+  max-height: 300px;
+}
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.log-header h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+}
+.btn-clear-logs {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.btn-clear-logs:hover {
+  color: var(--text-primary);
+  background: var(--bg-btn-hover);
+}
+.log-content {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color-light);
+  border-radius: 6px;
+  padding: 10px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+.log-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding-top: 24px;
+}
+.log-item {
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color-light);
+  padding: 4px 0;
+[软著文档助手 v1.0.0] 第23页 共60页
+
+  word-break: break-all;
+}
+.api-key-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.api-links {
+  margin-top: 4px;
+}
+.ai-link {
+  font-size: 11px;
+  color: var(--accent-color);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.ai-link:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+.cost-estimator-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.estimator-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  font-family: 'Outfit', sans-serif;
+}
+.estimator-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cost-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-color);
+  text-shadow: 0 0 8px rgba(0, 242, 254, 0.15);
+}
+.cost-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+[软著文档助手 v1.0.0] 第24页 共60页
+
+  line-height: 1.4;
+}
+.cost-advice {
+  font-size: 11px;
+  color: #F59E0B;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: 4px;
+  padding: 6px 8px;
+  line-height: 1.4;
+}
+.estimator-placeholder {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 8px 0;
+  font-style: italic;
+}
+.nav-sidebar {
+  width: 90px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 0;
+  backdrop-filter: blur(12px);
+  user-select: none;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+}
+.nav-item {
+  width: 74px;
+  height: 74px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+[软著文档助手 v1.0.0] 第25页 共60页
+
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 4px;
+}
+.nav-item:hover {
+  background: var(--bg-btn-hover);
+  color: var(--text-primary);
+  border-color: var(--border-color-light);
+  transform: translateY(-2px);
+}
+.nav-item.active {
+  background: var(--bg-tab-active);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 0 16px var(--accent-btn-shadow);
+  text-shadow: 0 0 8px rgba(0, 242, 254, 0.15);
+}
+.nav-icon {
+  font-size: 20px;
+}
+.nav-label {
+  font-size: 11px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+.nav-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.nav-footer .btn-log.active {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #F59E0B;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.15);
+}
+.main-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-primary);
+  transition: background 0.3s ease;
+}
+.workspace-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+[软著文档助手 v1.0.0] 第26页 共60页
+
+}
+.generate-workspace {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+.generate-config-aside {
+  width: 320px;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.generate-preview-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+.license-workspace,
+.help-workspace {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px;
+  display: flex;
+  justify-content: center;
+}
+.license-workspace .license-panel,
+.help-workspace .help-panel {
+  max-width: 720px;
+  width: 100%;
+  border-top: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+.generate-mini-log {
+  border-top: 1px solid var(--border-color);
+  padding: 16px 24px;
+  background: var(--bg-secondary);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+[软著文档助手 v1.0.0] 第27页 共60页
+
+  min-height: 160px;
+  max-height: 260px;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.mini-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.mini-log-header span {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.btn-clear-mini {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.btn-clear-mini:hover {
+  color: var(--text-primary);
+  background: var(--bg-btn-hover);
+}
+.mini-log-body {
+  flex: 1;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mini-log-item {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid var(--border-color-light);
+  padding-bottom: 2px;
+}
+.mini-log-empty {
+[软著文档助手 v1.0.0] 第28页 共60页
+
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding-top: 20px;
+}
+.workspace-log-view {
+  flex: 1;
+  padding: 30px;
+  display: flex;
+  justify-content: center;
+}
+.workspace-log-view .log-panel {
+  max-width: 900px;
+  width: 100%;
+  border-top: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  max-height: calc(100vh - 160px);
+  transition: all 0.3s ease;
+}
+.welcome-fingerprint-tip {
+  margin-top: 30px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--bg-btn);
+  border: 1px solid var(--border-color-light);
+  padding: 8px 14px;
+  border-radius: 6px;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+.welcome-fingerprint-tip code {
+  color: var(--accent-color);
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0 4px;
+}
+.mode-toggle-container {
+  margin-bottom: 16px;
+}
+.mode-toggle-label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+[软著文档助手 v1.0.0] 第29页 共60页
+
+.mode-toggle-group {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 10px 8px;
+  background: var(--bg-tab);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+.mode-btn:hover:not(:disabled) {
+  background: var(--bg-tab-hover);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+.mode-btn.active {
+  background: var(--bg-tab-active);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 0 12px var(--accent-btn-shadow);
+}
+.mode-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.mode-description {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding: 6px 8px;
+  background: var(--bg-btn);
+  border-radius: 4px;
+  border: 1px solid var(--border-color-light);
+}
+.preview-lock-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+[软著文档助手 v1.0.0] 第30页 共60页
+
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  color: #F59E0B;
+  font-size: 12px;
+  gap: 12px;
+}
+[data-theme='light'] .preview-lock-banner {
+  background: rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #D97706;
+}
+.btn-go-activate {
+  background: var(--accent-gradient);
+  color: var(--text-dark);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btn-go-activate:hover {
+  box-shadow: 0 0 10px var(--accent-btn-shadow);
+  transform: translateY(-0.5px);
+}
+.document-editor.preview-locked {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+.editor-container-layout {
+  display: flex;
+  gap: 16px;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+.editor-container-layout.split-layout .document-editor {
+  flex: 1;
+  min-width: 0;
+}
+.screenshot-manager {
+  width: 320px;
+  min-width: 320px;
+  background: var(--bg-secondary);
+[软著文档助手 v1.0.0] 第31页 共60页
+
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+}
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-tab-hover);
+}
+.tab-btn.active.wechat-tab {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+  color: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.15);
+}
+.tab-btn.active.alipay-tab {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  color: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.15);
+}
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.qr-container-wrapper {
+  margin-bottom: 16px;
+}
+.qr-glow-frame {
+  width: 220px;
+  height: 220px;
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  transition: box-shadow 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.qr-glow-frame.wechat {
+  border: 2px solid #22c55e;
+  animation: wechatGlow 2s infinite ease-in-out;
+}
+.qr-glow-frame.alipay {
+[软著文档助手 v1.0.0] 第32页 共60页
+
+  border: 2px solid #3b82f6;
+  animation: alipayGlow 2s infinite ease-in-out;
+}
+@keyframes wechatGlow {
+  0% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.6); }
+  100% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.2); }
+}
+@keyframes alipayGlow {
+  0% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+  100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.2); }
+}
+.qr-loading, .qr-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #1e293b;
+  text-align: center;
+  padding: 16px;
+}
+.qr-loading .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+.qr-loading span {
+  font-size: 11px;
+  color: #64748b;
+}
+.qr-error .error-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+.qr-error p {
+  margin: 0 0 12px 0;
+  font-size: 11px;
+  color: #64748b;
+}
+.qr-error .retry-btn {
+  padding: 6px 12px;
+  background: var(--accent-gradient);
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+[软著文档助手 v1.0.0] 第33页 共60页
+
+  font-weight: 600;
+  cursor: pointer;
+}
+.qr-image-box img {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+}
+.qr-placeholder {
+  width: 200px;
+  height: 200px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.qr-mock-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.qr-mock-dot {
+  width: 24px;
+  height: 24px;
+  background: #cbd5e1;
+  border-radius: 4px;
+  animation: pulseDot 1.5s infinite ease-in-out;
+}
+.qr-mock-dot:nth-child(2n) {
+  animation-delay: 0.3s;
+}
+.qr-mock-dot:nth-child(3n) {
+  animation-delay: 0.6s;
+}
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; background: #64748b; }
+}
+.price-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.price-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.price-amount {
+[软著文档助手 v1.0.0] 第34页 共60页
+
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-color);
+}
+.price-amount .original-price {
+  font-size: 11px;
+  text-decoration: line-through;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: 4px;
+}
+.polling-status-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-btn);
+  border: 1px solid var(--border-color-light);
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: pulseColor 1.5s infinite ease-in-out;
+}
+@keyframes pulseColor {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 8px #22c55e; }
+  100% { transform: scale(0.9); opacity: 0.6; }
+}
+.polling-status-msg span {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+.modal-footer {
+  border-top: 1px solid var(--border-color-light);
+  padding-top: 14px;
+}
+.modal-footer .safe-tips {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0 0 14px 0;
+}
+.footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+[软著文档助手 v1.0.0] 第35页 共60页
+
+}
+.btn-force-pay {
+  background: var(--accent-gradient);
+  color: var(--text-dark);
+  font-weight: 600;
+  font-size: 12px;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px var(--accent-btn-shadow);
+}
+.btn-force-pay:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px var(--accent-btn-shadow);
+}
+.btn-cancel {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-cancel:hover {
+  background: var(--bg-btn-hover);
+  color: var(--text-primary);
+}
+.payment-success-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  text-align: center;
+}
+.success-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 2px solid #22c55e;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+[软著文档助手 v1.0.0] 第36页 共60页
+
+  animation: successSplash 0.5s ease-out;
+}
+.success-checkmark {
+  color: #22c55e;
+  font-size: 32px;
+  font-weight: bold;
+}
+.payment-success-view h3 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+.payment-success-view p {
+  margin: 0 0 16px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.license-badge-code {
+  background: rgba(0, 242, 254, 0.08);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  padding: 6px 14px;
+  border-radius: 4px;
+  color: var(--accent-color);
+}
+.license-badge-code code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+@keyframes successSplash {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.1); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleUp {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.help-panel {
+  display: flex;
+[软著文档助手 v1.0.0] 第37页 共60页
+
+  flex-direction: column;
+  gap: 24px;
+}
+.help-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.help-section.margin-top {
+  margin-top: 16px;
+  border-top: 1px solid var(--border-color-light);
+  padding-top: 24px;
+}
+.help-section h4 {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.help-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.checklist-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+.checklist-group {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.checklist-group:hover {
+  border-color: rgba(0, 242, 254, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+.group-title {
+  display: flex;
+  align-items: center;
+[软著文档助手 v1.0.0] 第38页 共60页
+
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.group-title h5 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+}
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.badge-primary {
+  background: rgba(0, 242, 254, 0.1);
+  color: var(--accent-color);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+}
+.badge-secondary {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-secondary);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+.badge-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.checklist-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.checklist-items li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.checklist-items li::before {
+  content: "•";
+[软著文档助手 v1.0.0] 第39页 共60页
+
+  position: absolute;
+  left: 4px;
+  color: var(--accent-color);
+  font-weight: bold;
+}
+.checklist-items li strong {
+  display: inline-block;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.checklist-items li p {
+  margin: 2px 0 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.help-links {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.help-link-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+.help-link-item:hover {
+  background: var(--bg-btn-hover);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(0, 242, 254, 0.15);
+  transform: translateY(-1px);
+}
+.help-guide {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+}
+.help-guide ol {
+  margin: 0;
+[软著文档助手 v1.0.0] 第40页 共60页
+
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.help-guide li {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.help-guide li b {
+  color: var(--accent-color);
+}
+.compliance-report {
+  margin-top: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  animation: scaleUp 0.3s ease-out;
+  text-align: left;
+}
+.compliance-report h3 {
+  margin: 0 0 16px 0;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.compliance-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  border-bottom: 1px solid var(--border-color-light);
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+.compliance-score-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+[软著文档助手 v1.0.0] 第41页 共60页
+
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.compliance-score-box .score-num {
+  font-size: 32px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  line-height: 1.1;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.05);
+}
+.compl
+import { useEffect, useState } from 'react';
+import '../styles/copyright-panel.css';
+import type { CopyrightDocuments } from '../../shared/api';
+import { PaymentModal } from './PaymentModal';
+const WATERMARK_LINE = '【预览版 · 代码排版辅助】本内容由免费版排版提取，仅供预览并需人工润色';
+const TAB_LABELS = {
+  source: '源代码清单',
+  manual: '软件说明书',
+  form: '申请表格',
+} as const;
+type TabKey = keyof typeof TAB_LABELS;
+interface CopyrightViewProps {
+  documents: CopyrightDocuments;
+  projectName: string;
+  version: string;
+  licensed: boolean;
+  fingerprint: string;
+  workspaceRoot: string | null;
+  onLicenseChange: (licensed: boolean) => void;
+  onLogAdd: (msg: string) => void;
+  onTabChange?: (tab: 'generate' | 'license' | 'help') => void;
+}
+const SLOTS = [
+  { key: 'setup', label: '1. 安装步骤截图 (setup.png)', placeholder: '安装步骤' },
+  { key: 'main_ui', label: '2. 软件主界面截图 (main_ui.png)', placeholder: '软件主界面' },
+  { key: 'feature_run', label: '3. 核心功能运行 (feature_run.png)', placeholder: '功能运行' },
+  { key: 'result', label: '4. 运行结果/退出 (result.png)', placeholder: '运行结果' },
+];
+export function CopyrightView({
+  documents,
+  projectName,
+  version,
+  licensed,
+  fingerprint,
+  workspaceRoot,
+  onLicenseChange,
+  onLogAdd,
+  onTabChange,
+}: CopyrightViewProps) {
+  const [activeTab, setActiveTab] = useState<TabKey>('source');
+[软著文档助手 v1.0.0] 第42页 共60页
+
+  const [toast, setToast] = useState('');
+  const [sourceCode, setSourceCode] = useState('');
+  const [manual, setManual] = useState('');
+  const [applicationForm, setApplicationForm] = useState('');
+  const [screenshots, setScreenshots] = useState<Record<string, string[]>>({});
+  const [showPayment, setShowPayment] = useState(false);
+  const [payMethod, setPayMethod] = useState<'wechat' | 'alipay'>('wechat');
+  useEffect(() => {
+    setSourceCode(documents.sourceCode);
+    setManual(documents.manual);
+    setApplicationForm(documents.applicationForm);
+  }, [documents]);
+  const loadScreenshots = async () => {
+    try {
+      const res = await window.ruanzhu.getScreenshots();
+      if (res.ok && res.screenshots) {
+        setScreenshots(res.screenshots);
+      }
+    } catch (err) {
+      console.error('加载截图失败:', err);
+    }
+  };
+  useEffect(() => {
+    void loadScreenshots();
+  }, [workspaceRoot]);
+  const handleUpload = async (slotKey: string, index: number, file: File) => {
+    if (!workspaceRoot) return;
+    onLogAdd(`正在上传图片到插槽 [${slotKey}] 序号 ${index} : ${file.name}`);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const buffer = reader.result as ArrayBuffer;
+      const res = await window.ruanzhu.uploadScreenshot(slotKey, index, buffer);
+      if (res.ok) {
+        onLogAdd(`图片插槽 [${slotKey}] 序号 ${index} 上传成功！`);
+        showToast(`图片已保存`);
+        await loadScreenshots();
+      } else {
+        onLogAdd(`图片插槽 [${slotKey}] 序号 ${index} 上传失败: ${res.error}`);
+        showToast(res.error ?? '上传失败');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+  const handleDelete = async (slotKey: string, index: number) => {
+    if (!workspaceRoot) return;
+    onLogAdd(`正在删除插槽 [${slotKey}] 序号 ${index} 的图片`);
+    const res = await window.ruanzhu.uploadScreenshot(slotKey, index, null);
+    if (res.ok) {
+      onLogAdd(`图片插槽 [${slotKey}] 序号 ${index} 已删除`);
+      showToast('截图已删除');
+[软著文档助手 v1.0.0] 第43页 共60页
+
+      await loadScreenshots();
+    } else {
+      onLogAdd(`图片插槽 [${slotKey}] 序号 ${index} 删除失败: ${res.error}`);
+      showToast(res.error ?? '删除失败');
+    }
+  };
+  const getEditorValue = (): string => {
+    switch (activeTab) {
+      case 'source':
+        return sourceCode;
+      case 'manual':
+        return manual;
+      case 'form':
+        return applicationForm;
+    }
+  };
+  const handleEditorChange = (val: string) => {
+    if (!licensed) return;
+    switch (activeTab) {
+      case 'source':
+        setSourceCode(val);
+        break;
+      case 'manual':
+        setManual(val);
+        break;
+      case 'form':
+        setApplicationForm(val);
+        break;
+    }
+  };
+  const getDisplayValue = (tab: TabKey, val: string): string => {
+    if (licensed) return val;
+    switch (tab) {
+      case 'source': {
+        const lines = val.split('\n');
+        if (lines.length <= 100) return val;
+        return (
+          lines.slice(0, 100).join('\n') +
+          '\n\n\n...... [🔒 完整 60 页源代码已加密隐藏，请激活项目解锁完整版] ......'
+        );
+      }
+      case 'manual': {
+        const patterns = [/## 二、/i, /## 2\./i, /## 主要功能/i];
+        let index = -1;
+        for (const pattern of patterns) {
+          const match = val.match(pattern);
+          if (match && match.index !== undefined) {
+            index = match.index;
+            break;
+          }
+[软著文档助手 v1.0.0] 第44页 共60页
+
+        }
+        if (index !== -1) {
+          return (
+            val.slice(0, index).trim() +
+            '\n\n\n...... [🔒 完整软件说明书大纲已加密隐藏，请激活项目解锁完整版] ......'
+          );
+        }
+        if (val.length <= 400) return val;
+        return (
+          val.slice(0, 400) +
+          '\n\n\n...... [🔒 完整软件说明书大纲已加密隐藏，请激活项目解锁完整版] ......'
+        );
+      }
+      case 'form': {
+        const patterns = [/## 二、/i, /## 技术信息/i, /## 开发和发表/i];
+        let index = -1;
+        for (const pattern of patterns) {
+          const match = val.match(pattern);
+          if (match && match.index !== undefined) {
+            index = match.index;
+            break;
+          }
+        }
+        if (index !== -1) {
+          return (
+            val.slice(0, index).trim() +
+            '\n\n\n...... [🔒 完整登记申报表格数据已加密隐藏，请激活项目解锁完整版] ......'
+          );
+        }
+        if (val.length <= 300) return val;
+        return (
+          val.slice(0, 300) +
+          '\n\n\n...... [🔒 完整登记申报表格数据已加密隐藏，请激活项目解锁完整版] ......'
+        );
+      }
+    }
+  };
+  const defaultName = `软著_${TAB_LABELS[activeTab]}_${new Date().toISOString().slice(0, 10)}`;
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 4000);
+  };
+  const handleUnlicensedExport = () => {
+    setPayMethod('wechat');
+    setShowPayment(true);
+    showToast('该项目尚未激活，请完成支付激活以解锁导出与排版功能');
+    onLogAdd('导出拦截: 引导进入扫码支付激活结算台');
+  };
+  const handleExport = async (format: 'md' | 'docx' | 'txt' | 'pdf') => {
+    if (!licensed) {
+[软著文档助手 v1.0.0] 第45页 共60页
+
+      handleUnlicensedExport();
+      return;
+    }
+    onLogAdd(`尝试保存「${TAB_LABELS[activeTab]}」为 ${format.toUpperCase()} 格式...`);
+    const res = await window.ruanzhu.saveFile({
+      content: getEditorValue(),
+      defaultName,
+      format,
+    });
+    if (res.ok && res.path) {
+      showToast(`已保存：${res.path}`);
+      onLogAdd(`成功保存单项文档: ${res.path}`);
+    } else if (res.error) {
+      showToast(res.error);
+      onLogAdd(`单项文档保存失败: ${res.error}`);
+    }
+  };
+  const handleExportAll = async () => {
+    if (!licensed) {
+      handleUnlicensedExport();
+      return;
+    }
+    onLogAdd(`开始一键导出全部已编辑软著文档...`);
+    const editedDocs: CopyrightDocuments = {
+      sourceCode,
+      manual,
+      applicationForm,
+    };
+    const res = await window.ruanzhu.exportAll({ documents: editedDocs, projectName, version });
+    if (res.ok && res.path) {
+      showToast(`已导出到：${res.path}`);
+      onLogAdd(`一键导出全部文档成功! 输出目录: ${res.path}`);
+    } else if (res.error) {
+      showToast(res.error);
+      onLogAdd(`一键导出全部文档失败: ${res.error}`);
+    }
+  };
+  const handlePaymentSuccess = () => {
+    setShowPayment(false);
+    onLicenseChange(true);
+    showToast('项目激活成功！已解锁全部功能。');
+  };
+  return (
+    <div className={`copyright-view ${licensed ? '' : 'with-watermark'}`}>
+      <div className="toolbar">
+        <div className="tabs">
+          {(Object.keys(TAB_LABELS) as TabKey[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+[软著文档助手 v1.0.0] 第46页 共60页
+
+              className={activeTab === key ? 'active' : ''}
+              onClick={() => setActiveTab(key)}
+            >
+              {TAB_LABELS[key]}
+            </button>
+          ))}
+        </div>
+        <div className="actions">
+          <button
+            type="button"
+            onClick={() => void handleExportAll()}
+            className={licensed ? '' : 'btn-muted'}
+            title={licensed ? '' : '需要激活当前项目'}
+          >
+            一键导出全部{licensed ? '' : ' 🔒'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleExport('md')}
+            className={licensed ? '' : 'btn-muted'}
+            title={licensed ? '' : '需要激活当前项目'}
+          >
+            导出 Markdown{licensed ? '' : ' 🔒'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleExport('txt')}
+            className={licensed ? '' : 'btn-muted'}
+            title={licensed ? '' : '需要激活当前项目'}
+          >
+            导出 TXT{licensed ? '' : ' 🔒'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleExport('pdf')}
+            className={licensed ? '' : 'btn-muted'}
+            title={licensed ? '' : '需要激活当前项目'}
+          >
+            导出 PDF{licensed ? '' : ' 🔒'}
+          </button>
+          {activeTab !== 'source' && (
+            <button
+              type="button"
+              onClick={() => void handleExport('docx')}
+              title={licensed ? '' : '需要激活当前项目'}
+              className={licensed ? '' : 'btn-muted'}
+            >
+              导出 Word{licensed ? '' : ' 🔒'}
+            </button>
+          )}
+[软著文档助手 v1.0.0] 第47页 共60页
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!licensed) {
+                handleUnlicensedExport();
+              } else {
+                window.print();
+              }
+            }}
+            className={licensed ? '' : 'btn-muted'}
+            title={licensed ? '' : '需要激活当前项目'}
+          >
+            打印{licensed ? '' : ' 🔒'}
+          </button>
+        </div>
+      </div>
+      {toast && <div className="toast">{toast}</div>}
+      <div className="content">
+        {!licensed && (
+          <div className="preview-lock-banner">
+            <span>🔒 <b>预览模式</b>：当前项目尚未激活，文档内容已部分隐藏。请扫码支付激活以解锁完整内容与导出权限。</span>
+            {onTabChange && (
+              <button
+                type="button"
+                className="btn-go-activate"
+                onClick={() => triggerPayment('wechat')}
+              >
+                立即激活 →
+              </button>
+            )}
+          </div>
+        )}
+        {!licensed && <div className="watermark-overlay">{WATERMARK_LINE}</div>}
+        <div className={`editor-container-layout ${activeTab === 'manual' ? 'split-layout' : 'full-layout'}`}>
+          <textarea
+            className={`document-editor ${licensed ? '' : 'preview-locked'}`}
+            value={getDisplayValue(activeTab, getEditorValue())}
+            onChange={(e) => handleEditorChange(e.target.value)}
+            spellCheck={false}
+            readOnly={!licensed}
+          />
+          {activeTab === 'manual' && (
+            <div className="screenshot-manager">
+              <div className="screenshot-manager-header">
+                <h5>说明书截图管理</h5>
+                <p>支持多图顺序嵌入。拖放至卡片中可追加图片。</p>
+              </div>
+              <div className="screenshot-slots">
+                {SLOTS.map((slot) => {
+                  const imgList = screenshots[slot.key] || [];
+[软著文档助手 v1.0.0] 第48页 共60页
+
+                  return (
+                    <div
+                      key={slot.key}
+                      className="screenshot-slot-card"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files[0];
+                        if (file) {
+                          await handleUpload(slot.key, imgList.length, file);
+                        }
+                      }}
+                    >
+                      <div className="slot-title">{slot.label}</div>
+                      <div className="slot-images-grid">
+                        {imgList.map((img, idx) => (
+                          <div key={idx} className="screenshot-item-container">
+                            <img src={img} alt={`${slot.label} ${idx + 1}`} className="preview-image" />
+                            <div className="hover-overlay" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className="btn-action replace-btn"
+                                onClick={() => document.getElementById(`file-input-${slot.key}-${idx}`)?.click()}
+                              >
+                                替换
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-action delete-btn"
+                                onClick={() => handleDelete(slot.key, idx)}
+                              >
+                                删除
+                              </button>
+                            </div>
+                            <input
+                              id={`file-input-${slot.key}-${idx}`}
+                              type="file"
+                              accept="image/png, image/jpeg"
+                              style={{ display: 'none' }}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  await handleUpload(slot.key, idx, file);
+                                }
+                              }}
+                            />
+                          </div>
+                        ))}
+                        <div
+                          className="screenshot-add-card"
+[软著文档助手 v1.0.0] 第49页 共60页
+
+                          onClick={() => document.getElementById(`file-input-${slot.key}-add`)?.click()}
+                        >
+                          <span className="add-icon">➕</span>
+                          <span className="add-text">添加图片</span>
+                          <input
+                            id={`file-input-${slot.key}-add`}
+                            type="file"
+                            accept="image/png, image/jpeg"
+                            style={{ display: 'none' }}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                await handleUpload(slot.key, imgList.length, file);
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      {showPayment && (
+        <PaymentModal
+          workspaceRoot={workspaceRoot}
+          fingerprint={fingerprint}
+          onClose={() => setShowPayment(false)}
+          onSuccess={handlePaymentSuccess}
+          onLogAdd={onLogAdd}
+        />
+      )}
+    </div>
+  );
+  function triggerPayment(method: 'wechat' | 'alipay') {
+    setPayMethod(method);
+    setShowPayment(true);
+  }
+}
+import { useEffect, useState, useRef } from 'react';
+interface PaymentModalProps {
+  workspaceRoot: string | null;
+  fingerprint: string;
+  onClose: () => void;
+  onSuccess: (licenseKey: string) => void;
+  onLogAdd: (msg: string) => void;
+}
+[软著文档助手 v1.0.0] 第50页 共60页
+
+export function PaymentModal({
+  workspaceRoot,
+  fingerprint,
+  onClose,
+  onSuccess,
+  onLogAdd,
+}: PaymentModalProps) {
+  const [method, setMethod] = useState<'wechat' | 'alipay'>('wechat');
+  const [orderId, setOrderId] = useState('');
+  const [qrUrl, setQrUrl] = useState('');
+  const [status, setStatus] = useState<'creating' | 'pending' | 'paid' | 'error'>('creating');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [timeLeft, setTimeLeft] = useState(10);
+  const [qrLoaded, setQrLoaded] = useState(false);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const initOrder = async (payMethod: 'wechat' | 'alipay') => {
+    setStatus('creating');
+    setErrorMsg('');
+    setQrLoaded(false);
+    onLogAdd(`正在创建 [${payMethod === 'wechat' ? '微信' : '支付宝'}] 模拟订单...`);
+    try {
+      const res = await window.ruanzhu.createOrder(fingerprint, payMethod);
+      if (res.ok && res.orderId && res.qrUrl) {
+        setOrderId(res.orderId);
+        setQrUrl(res.qrUrl);
+        setStatus('pending');
+        setTimeLeft(10);
+        onLogAdd(`订单创建成功: ${res.orderId}。开始轮询支付状态...`);
+      } else {
+        setStatus('error');
+        setErrorMsg(res.error ?? '无法创建订单');
+        onLogAdd(`创建订单失败: ${res.error ?? '未知错误'}`);
+      }
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg('网络或系统接口错误');
+      onLogAdd(`创建订单异常: ${String(err)}`);
+    }
+  };
+  useEffect(() => {
+    void initOrder(method);
+    return () => {
+      stopPolling();
+    };
+  }, [method]);
+  const checkPayment = async (force?: boolean) => {
+    if (!orderId) return;
+    try {
+      const res = await window.ruanzhu.queryOrder(orderId, force);
+[软著文档助手 v1.0.0] 第51页 共60页
+
+      if (res.ok && res.status === 'paid' && res.licenseKey) {
+        stopPolling();
+        setStatus('paid');
+        onLogAdd(`轮询检测成功！订单 ${orderId} 已支付，获得激活码：${res.licenseKey}`);
+        if (workspaceRoot) {
+          const activateRes = await window.ruanzhu.activateLicense({
+            root: workspaceRoot,
+            fingerprint,
+            key: res.licenseKey,
+          });
+          if (activateRes.ok) {
+            onLogAdd(`项目已成功自动激活并绑定指纹！`);
+            setTimeout(() => {
+              onSuccess(res.licenseKey!);
+            }, 1800);
+          } else {
+            setErrorMsg(activateRes.error ?? '激活失败');
+            setStatus('error');
+            onLogAdd(`自动激活失败: ${activateRes.error}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('查询订单失败:', err);
+    }
+  };
+  useEffect(() => {
+    if (status !== 'pending') return;
+    pollIntervalRef.current = setInterval(() => {
+      void checkPayment();
+    }, 3000);
+    countdownIntervalRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          void checkPayment();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      stopPolling();
+    };
+  }, [status, orderId]);
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+[软著文档助手 v1.0.0] 第52页 共60页
+
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  };
+  const handleForceSuccess = () => {
+    void checkPayment(true);
+  };
+  const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}`;
+  return (
+    <div className="payment-modal-overlay">
+      <div className={`payment-modal-card ${method}`}>
+        <button type="button" className="close-btn" onClick={onClose}>
+          ✕
+        </button>
+        {status === 'paid' ? (
+          <div className="payment-success-view">
+            <div className="success-icon-wrapper">
+              <span className="success-checkmark">✓</span>
+            </div>
+            <h3>支付激活成功</h3>
+            <p>感谢支持！已检测到付款，正在为您的项目写入授权文件...</p>
+            <div className="license-badge-code">
+              <code>RZ-{fingerprint.slice(0, 8)}...-PRO</code>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="modal-header">
+              <h3>解锁完整版排版与 Word 导出</h3>
+              <p className="subtitle">一次激活，该项目永久免除额度与水印限制（多端通用）</p>
+            </div>
+            <div className="payment-tabs">
+              <button
+                type="button"
+                className={`tab-btn wechat-tab ${method === 'wechat' ? 'active' : ''}`}
+                onClick={() => setMethod('wechat')}
+              >
+                <span className="tab-icon">💬</span> 微信支付
+              </button>
+              <button
+                type="button"
+                className={`tab-btn alipay-tab ${method === 'alipay' ? 'active' : ''}`}
+                onClick={() => setMethod('alipay')}
+              >
+                <span className="tab-icon">💳</span> 支付宝
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="qr-container-wrapper">
+                <div className={`qr-glow-frame ${method}`}>
+[软著文档助手 v1.0.0] 第53页 共60页
+
+                  {status === 'creating' && (
+                    <div className="qr-loading">
+                      <div className="spinner"></div>
+                      <span>正在创建安全账单...</span>
+                    </div>
+                  )}
+                  {status === 'error' && (
+                    <div className="qr-error">
+                      <span className="error-icon">⚠️</span>
+                      <p>{errorMsg || '账单创建失败，请重试'}</p>
+                      <button type="button" className="retry-btn" onClick={() => void initOrder(method)}>
+                        重试
+                      </button>
+                    </div>
+                  )}
+                  {status === 'pending' && (
+                    <div className="qr-image-box">
+                      <img
+                        src={qrImgSrc}
+                        alt="Payment QR Code"
+                        onLoad={() => setQrLoaded(true)}
+                        style={{ display: qrLoaded ? 'block' : 'none' }}
+                      />
+                      {!qrLoaded && (
+                        <div className="qr-placeholder">
+                          <div className="qr-mock-grid">
+                            {[...Array(9)].map((_, i) => (
+                              <div key={i} className="qr-mock-dot" />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="price-details">
+                <span className="price-label">优惠价格:</span>
+                <span className="price-amount">¥9.90 <span className="original-price">¥49.00</span></span>
+              </div>
+              {status === 'pending' && (
+                <div className="polling-status-msg">
+                  <div className="pulse-dot"></div>
+                  <span>
+                    支付轮询中... <b>{timeLeft > 0 ? `模拟付款在 ${timeLeft} 秒内自动生效` : '已进入全自动校验模式'}</b>
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+[软著文档助手 v1.0.0] 第54页 共60页
+
+              <p className="safe-tips">🛡️ 本产品使用沙箱/真实当面付双重机制。如您处于测试环境，可等待倒计时完毕或点击下方按钮直接模拟成功付款。</p>
+              <div className="footer-actions">
+                {status === 'pending' && (
+                  <button type="button" className="btn-force-pay" onClick={handleForceSuccess}>
+                    ⚡ 模拟付款成功 (免扫码)
+                  </button>
+                )}
+                <button type="button" className="btn-cancel" onClick={onClose}>
+                  取消
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+import { useState } from 'react';
+import { PaymentModal } from './PaymentModal';
+interface LicensePanelProps {
+  workspaceRoot: string | null;
+  fingerprint: string;
+  licensed: boolean;
+  onLicenseChange: (licensed: boolean) => void;
+  onLogAdd: (msg: string) => void;
+}
+export function LicensePanel({
+  workspaceRoot,
+  fingerprint,
+  licensed,
+  onLicenseChange,
+  onLogAdd,
+}: LicensePanelProps) {
+  const [licenseKey, setLicenseKey] = useState('');
+  const [message, setMessage] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [payMethod, setPayMethod] = useState<'wechat' | 'alipay'>('wechat');
+  const handleCopyFingerprint = () => {
+    if (!fingerprint) return;
+    void navigator.clipboard.writeText(fingerprint);
+    setCopied(true);
+    onLogAdd(`已复制项目特征指纹: ${fingerprint}`);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  const handleActivate = async () => {
+    if (!workspaceRoot) return;
+    setMessage('');
+    onLogAdd(`尝试使用激活码 "${licenseKey}" 激活当前项目...`);
+[软著文档助手 v1.0.0] 第55页 共60页
+
+    const res = await window.ruanzhu.activateLicense({
+      root: workspaceRoot,
+      fingerprint,
+      key: licenseKey,
+    });
+    if (res.ok) {
+      setMessage('当前项目已成功激活！');
+      onLogAdd(`项目激活成功! (指纹: ${fingerprint})`);
+      setLicenseKey('');
+      onLicenseChange(true);
+    } else {
+      setMessage(res.error ?? '激活失败');
+      onLogAdd(`项目激活失败: ${res.error ?? '无效的激活码'}`);
+    }
+  };
+  const handleDeactivate = async () => {
+    if (!workspaceRoot) return;
+    const res = await window.ruanzhu.deactivateLicense({ root: workspaceRoot });
+    if (res.ok) {
+      setMessage('已取消当前项目的激活');
+      onLogAdd(`项目取消激活。`);
+      onLicenseChange(false);
+    }
+  };
+  const triggerPayment = (method: 'wechat' | 'alipay') => {
+    setPayMethod(method);
+    setShowPayment(true);
+  };
+  const handlePaymentSuccess = () => {
+    setShowPayment(false);
+    onLicenseChange(true);
+    setMessage('当前项目已成功激活！');
+  };
+  if (!workspaceRoot) {
+    return (
+      <div className="license-panel">
+        <h4>项目授权</h4>
+        <p className="license-status" style={{ opacity: 0.6, fontSize: '0.85rem' }}>
+          请先选择项目文件夹以获取授权信息。
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="license-panel">
+      <h4>项目授权</h4>
+      <div className="fingerprint-box">
+        <span className="label">项目指纹:</span>
+        <code className="fingerprint-value">{fingerprint}</code>
+        <button type="button" className="btn-copy" onClick={handleCopyFingerprint}>
+[软著文档助手 v1.0.0] 第56页 共60页
+
+          {copied ? '已复制' : '复制'}
+        </button>
+      </div>
+      <p className="license-status">
+        授权状态：<strong>{licensed ? '已激活 (免重复收费)' : '未激活 (导出 Word 将带水印)'}</strong>
+      </p>
+      {}
+      {!licensed && (
+        <div className="payment-area">
+          <div className="payment-title">选择扫码支付激活项目 (¥9.90 / 终身免检)</div>
+          <div className="payment-qrcodes">
+            <div className="qrcode-box clickable" onClick={() => triggerPayment('wechat')} style={{ cursor: 'pointer' }}>
+              <div className="qrcode-mock wechat">
+                <span className="qrcode-icon">💬</span>
+                <span className="qrcode-name">微信支付</span>
+              </div>
+              <small>使用微信扫码支付</small>
+            </div>
+            <div className="qrcode-box clickable" onClick={() => triggerPayment('alipay')} style={{ cursor: 'pointer' }}>
+              <div className="qrcode-mock alipay">
+                <span className="qrcode-icon">💳</span>
+                <span className="qrcode-name">支付宝</span>
+              </div>
+              <small>使用支付宝支付</small>
+            </div>
+          </div>
+          <p className="payment-tip">
+            💡 点击上方图标可开启流光扫码结算台。支持倒计时自动支付模拟，免注册直接激活。
+          </p>
+        </div>
+      )}
+      {!licensed && (
+        <div className="activate-box">
+          <input
+            value={licenseKey}
+            onChange={(e) => setLicenseKey(e.target.value)}
+            placeholder="请输入获得的激活码"
+          />
+          <button type="button" className="btn-secondary" onClick={() => void handleActivate()}>
+            手动激活
+          </button>
+        </div>
+      )}
+      {licensed && (
+        <button type="button" className="btn-deactivate" onClick={() => void handleDeactivate()}>
+          取消激活
+        </button>
+      )}
+      {message && <small className="license-msg">{message}</small>}
+      {showPayment && (
+[软著文档助手 v1.0.0] 第57页 共60页
+
+        <PaymentModal
+          workspaceRoot={workspaceRoot}
+          fingerprint={fingerprint}
+          onClose={() => setShowPayment(false)}
+          onSuccess={handlePaymentSuccess}
+          onLogAdd={onLogAdd}
+        />
+      )}
+    </div>
+  );
+}
+import logo from '../assets/logo.png';
+interface ProjectBarProps {
+  workspaceRoot: string | null;
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
+  onFolderSelected: (info: { root: string; name: string; version: string; fingerprint: string; licensed: boolean }) => void;
+}
+export function ProjectBar({ workspaceRoot, theme, onToggleTheme, onFolderSelected }: ProjectBarProps) {
+  const handleSelect = async () => {
+    try {
+      const info = await window.ruanzhu.selectFolder();
+      if (info) onFolderSelected(info);
+    } catch (err) {
+      console.error('Select folder failed:', err);
+    }
+  };
+  return (
+    <header className="project-bar">
+      <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <img src={logo} alt="Logo" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
+        软著文档助手
+      </div>
+      <button type="button" className="btn-primary" onClick={() => void handleSelect()}>
+        选择项目文件夹
+      </button>
+      <div className="project-path" title={workspaceRoot ?? ''}>
+        {workspaceRoot ? `当前项目：${workspaceRoot}` : '未选择项目'}
+      </div>
+      <button
+        type="button"
+        className="btn-theme-toggle"
+        onClick={onToggleTheme}
+        title={theme === 'dark' ? '切换至浅色模式' : '切换至深色模式'}
+      >
+        {theme === 'dark' ? '☀️ 浅色' : '🌙 深色'}
+      </button>
+    </header>
+  );
+}
+[软著文档助手 v1.0.0] 第58页 共60页
+
+interface HelpPanelProps {
+  onLogAdd: (msg: string) => void;
+}
+export function HelpPanel({ onLogAdd }: HelpPanelProps) {
+  const handleLinkClick = (name: string) => {
+    onLogAdd(`点击了资源链接: ${name}`);
+  };
+  const handleDownloadTemplate = async (type: 'cooperative' | 'commissioned') => {
+    onLogAdd(`开始生成并导出 ${type === 'cooperative' ? '《软件合作开发协议书》' : '《软件受托开发合同书》'} 模板...`);
+    try {
+      const res = await window.ruanzhu.downloadTemplate({ templateType: type });
+      if (res.ok && res.filePath) {
+        onLogAdd(`模板保存成功: ${res.filePath}`);
+      } else if (res.error) {
+        onLogAdd(`模板保存失败: ${res.error}`);
+      }
+    } catch (err) {
+      onLogAdd(`模板导出遇到异常: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+  return (
+    <div className="help-panel">
+      <div className="help-section">
+        <h4>📋 计算机软件著作权登记材料清单</h4>
+        <p className="help-subtitle">
+          中国版权保护中心（CCPC）软著登记已全面推行线上电子申报，您需对照下方清单准备对应的扫描件或文档，登录官网填报并上传。
+        </p>
+        <div className="checklist-container">
+          <div className="checklist-group">
+            <div className="group-title">
+              <span className="badge badge-primary">本工具全自动生成</span>
+              <h5>1. 核心鉴别材料 (必须提供)</h5>
+            </div>
+            <ul className="checklist-items">
+              <li>
+                <strong>📄 源代码清单 (前 30 页 + 后 30 页，共 60 页)</strong>
+                <p>由本工具自动剔除空行和多行注释后格式化排版（五号 Times New Roman/宋体，每页 50 行，含正确的页眉页脚与连续页码）。激活后直接导出 Word 即可使用。</p>
+              </li>
+              <li>
+                <strong>📔 软件说明书 (用户操作手册 / 概要设计说明书)</strong>
+                <p>不少于 10 页。由本工具自动结合代码特征生成说明大纲。在右侧<b>截图管理器</b>中上传主界面及运行截图，系统导出时自动内嵌，导出后对照修改即可。</p>
+              </li>
+              <li>
+                <strong>✍️ 官网填报核心字段数据 (登记申报数据)</strong>
+                <p>包含软件全称、简称、版本号、软硬件开发环境、技术特征描述等。本工具已在“申请表格”标签页为您整理好，直接复制粘贴到官网填报输入框中即可。</p>
+              </li>
+            </ul>
+          </div>
+          <div className="checklist-group">
+            <div className="group-title">
+[软著文档助手 v1.0.0] 第59页 共60页
+
+              <span className="badge badge-secondary">您需要自行准备</span>
+              <h5>2. 申请人主体身份证明文件 (必须提供)</h5>
+            </div>
+            <ul className="checklist-items">
+              <li>
+                <strong>🏢 企事业单位申请：</strong>
+                <p>提供最新的<b>营业执照副本</b>彩色扫描件（PDF/JPG 均可，要求清晰可见）。必须在复印件正中加盖申请单位的<b>红色实体公章</b>并扫描。</p>
+              </li>
+              <li>
+                <strong>👤 个人申请：</strong>
+                <p>提供申请人<b>身份证正反面</b>的彩色复印件或扫描件。要求在复印件非文字区域书写<b>手写亲笔签名</b>，然后拍照/扫描上传。</p>
+              </li>
+            </ul>
+          </div>
+          <div className="checklist-group">
+            <div className="group-title">
+              <span className="badge badge-warning">特定情况补充</span>
+              <h5>3. 其它补充证明文件 (选择性提供)</h5>
+            </div>
+            <ul className="checklist-items">
+              <li>
+                <strong>🤝 合作开发 / 受托开发合同：</strong>
+                <p>若软件属于多人合作开发，或受企业/他人委托研发，须加传<b>《合作开发协议》</b>或<b>《委托开发合同》</b>盖章复印件以明确版权所有归属。</p>
+              </li>
+              <li>
+                <strong>📈 版本号高于 1.0 的说明（非首次登记）：</strong>
+                <p>若申请登记的软件版本号不是 V1.0（如 V2.0 且之前已有低版本软著），版权中心一般会要求提供<b>《版本说明书》</b>，说明本次版本升级的修改详情。</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div className="help-section margin-top">
+        <h4>🔗 国家版权中心官方通道</h4>
+        <div className="help-links">
+          <a
+            href="https://register.ccopyright.com.cn/registration.html"
+            target="_blank"
+            rel="noreferrer"
+            className="help-link-item"
+            onClick={() => handleLinkClick('中国版权保护中心登记大厅')}
+          >
+            🌐 版权中心在线登记大厅官网 ↗
+          </a>
+          <a
+            href="https://www.ccopyright.com.cn/index.php?optionid=1080"
+            target="_blank"
+            rel="noreferrer"
+            className="help-link-item"
+            onClick={() => handleLinkClick('计算机软件著作权登记指南')}
+[软著文档助手 v1.0.0] 第60页 共60页
+
+          >
+            📘 CCPC 计算机软件著作权登记指南 ↗
+          </a>
+        </div>
+      </div>
+      <div className="help-section margin-top">
+        <h4>📋 官方辅助文书与协议模板下载</h4>
+        <p className="help-subtitle">
+          软件属于共同研发或受托研发等特定权属划分情况时，版权中心要求上传证明合同。您可在此一键生成并导出符合官方规范的文书草案。
+        </p>
+        <div className="template-download-list">
+          <div className="template-item-card">
+            <div className="template-info">
+              <h5>🤝 软件合作开发协议书</h5>
+              <p>适用于两个或两个以上主体（个人或企业）联合开发软件，共同所有著作权的场景。</p>
+            </div>
+            <button
+              className="btn-download-template"
+              onClick={() => handleDownloadTemplate('cooperative')}
+            >
+              📥 生成并导出 (.docx)
+            </button>
+          </div>
+          <div className="template-item-card">
+            <div className="template-info">
+              <h5>🏢 软件受托开发合同书</h5>
+              <p>适用于委托第三方外包团队或个人编写软件，且约定著作权归属于委托方的场景。</p>
+            </div>
+            <button
+              className="btn-download-template"
+              onClick={() => handleDownloadTemplate('commissioned')}
+            >
+              📥 生成并导出 (.docx)
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="help-section margin-top">
+        <h4>💡 本软件快速使用指引</h4>
+        <div className="help-guide">
+          <ol>
+            <li>选择项目代码文件夹，系统将自动扫描并显示文件数、行数并计算<b>“项目特征指纹”</b>。</li>
+            <li>配置大模型 API Key（用于深入理解代码逻辑），点击<b>“一键提取与排版”</b>开始后台格式化与大纲分析。</li>
+            <li>在右侧的“说明书截图管理”中上传软件运行截图，点击<b>“一键导出全部”</b>即可直接生成并导出免水印的 Word / PDF / Markdown 申报材料！</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  );
+}

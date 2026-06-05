@@ -23,15 +23,79 @@ export class CodeIntel {
     ];
 
     const entries: CodeFile[] = [];
+
+    // Helper to identify test/demo directories
+    const isTestOrDemoDir = (relPath: string): boolean => {
+      const parts = relPath.toLowerCase().split('/');
+      return parts.some(part =>
+        ['test', 'tests', 'fixture', 'fixtures', 'example', 'examples', 'demo', 'demos', 'sample', 'samples', 'spec', 'specs', 'mock', 'mocks', 'scratch'].includes(part)
+      );
+    };
+
+    // 1. Standard name pattern matching
     for (const pattern of entryPatterns) {
       for (const [relPath, file] of this.filesMap.entries()) {
+        if (isTestOrDemoDir(relPath)) continue;
         const baseName = path.basename(relPath);
         if (pattern.test(baseName)) {
           entries.push(file);
         }
       }
     }
-    return Array.from(new Set(entries));
+
+    const uniqueEntries = Array.from(new Set(entries));
+    if (uniqueEntries.length > 0) {
+      return uniqueEntries;
+    }
+
+    // 2. Fallback: Search for source files containing main signatures
+    const mainSignatures = [
+      /if\s+__name__\s*==\s*['"]__main__['"]/i, // Python
+      /public\s+static\s+void\s+main\b/i,       // Java / C#
+      /\bint\s+main\s*\(/i,                     // C / C++
+      /\bvoid\s+main\s*\(/i,                    // C / C++
+      /\bfunc\s+main\s*\(/i,                    // Go
+      /\bfn\s+main\s*\(/i,                      // Rust
+    ];
+
+    for (const [relPath, file] of this.filesMap.entries()) {
+      if (isTestOrDemoDir(relPath)) continue;
+      for (const sig of mainSignatures) {
+        if (sig.test(file.content)) {
+          uniqueEntries.push(file);
+          break;
+        }
+      }
+    }
+
+    if (uniqueEntries.length > 0) {
+      return Array.from(new Set(uniqueEntries));
+    }
+
+    // 3. Fallback: Identify the file with the most resolved local imports
+    let maxImports = -1;
+    let candidate: CodeFile | null = null;
+
+    for (const [relPath, file] of this.filesMap.entries()) {
+      if (isTestOrDemoDir(relPath)) continue;
+      const imports = this.extractImports(file);
+      let resolvedCount = 0;
+      for (const imp of imports) {
+        if (this.resolveImport(file.path, imp)) {
+          resolvedCount++;
+        }
+      }
+      if (resolvedCount > maxImports) {
+        maxImports = resolvedCount;
+        candidate = file;
+      }
+    }
+
+    if (candidate) {
+      uniqueEntries.push(candidate);
+    }
+
+    return Array.from(new Set(uniqueEntries));
   }
 
   /**

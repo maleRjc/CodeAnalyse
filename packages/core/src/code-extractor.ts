@@ -58,7 +58,7 @@ const PRIORITY_PATTERNS = [
   /helper/,
 ];
 
-const MAX_FILES = 800;
+const MAX_FILES = 3000;
 
 export class CodeExtractor {
   private workspaceRoot: string;
@@ -121,6 +121,24 @@ export class CodeExtractor {
         for (const segment of segments) {
           if (
             EXCLUDE_DIRS.has(segment) ||
+            segment.startsWith('.') ||
+            segment === 'test' ||
+            segment === 'tests' ||
+            segment === 'fixture' ||
+            segment === 'fixtures' ||
+            segment === 'example' ||
+            segment === 'examples' ||
+            segment === 'demo' ||
+            segment === 'demos' ||
+            segment === 'sample' ||
+            segment === 'samples' ||
+            segment === 'spec' ||
+            segment === 'specs' ||
+            segment === 'mock' ||
+            segment === 'mocks' ||
+            segment === '__tests__' ||
+            segment === 'scratch' ||
+            segment === 'scripts' ||
             segment.startsWith('build-') ||
             segment.startsWith('dependencies') ||
             segment === 'debug' ||

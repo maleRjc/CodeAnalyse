@@ -1,0 +1,51 @@
+/**
+ * RuanZhu: A Software Copyright Document Generation Assistant
+ * 
+ * Copyright 2026 RuanZhu Dev Team
+ * 
+ * Licensed under the MIT License
+ */
+
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+export interface CodeFile {
+  path: string;
+  content: string;
+  lines: string[];
+  lineCount: number;
+}
+
+export class CodeExtractor {
+  private workspaceRoot: string;
+
+  constructor(workspaceRoot: string) {
+    this.workspaceRoot = workspaceRoot;
+  }
+
+  async scanFiles(dir: string): Promise<CodeFile[]> {
+    const files: CodeFile[] = [];
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const subFiles = await this.scanFiles(fullPath);
+        files.push(...subFiles);
+      } else if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
+        const content = await fs.readFile(fullPath, 'utf-8');
+        const lines = content.split('\n');
+        files.push({
+          path: fullPath,
+          content,
+          lines,
+          lineCount: lines.length
+        });
+      }
+    }
+    return files;
+  }
+}
+
+/* 每页正好 50 行，配备中国版权局要求的页眉与页码 */
+/* [软著文档助手 v1.0.0]                     第1页 共60页 */

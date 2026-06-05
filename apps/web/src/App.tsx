@@ -1,75 +1,8 @@
 import { useState } from 'react';
 import './App.css';
-
-const SAMPLE_SOURCE_CODE = `/**
- * FreeRDP: A Remote Desktop Protocol Implementation
- * Advanced Input Virtual Channel Extension
- *
- * Copyright 2022 Armin Novak <anovak@thincast.com>
- * Copyright 2022 Thincast Technologies GmbH
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- */
-
-#include <freerdp/config.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <winpr/crt.h>
-#include <winpr/synch.h>
-#include <winpr/thread.h>
-#include <winpr/stream.h>
-
-#include <freerdp/log.h>
-#include <freerdp/channels/log.h>
-#include <freerdp/client/channels.h>
-
-#define TAG CHANNELS_TAG("advanced-input")
-
-typedef struct
-{
-	ChannelClientContext common;
-	void* msgs;
-	BOOL initialized;
-} AdvancedInputClientContext;
-
-/* 每页正好 50 行，配备中国版权局要求的页眉与页码 */
-/* [FreeRDP v1.0.0]                      第1页 共60页 */
-`;
-
-const SAMPLE_MANUAL = `# 软著文档助手 — 软件说明书
-
-## 1. 软件概述
-软著文档助手是一款专为软件开发者及企业设计的一键软著申报文档排版利器。软件采用纯本地运行架构，用户无需上传任何代码或个人隐私文件至云端，即可在几秒内生成专业、合规的软件著作权申请文档。
-
-## 2. 软件运行环境与配置
-* **操作系统**：Windows 10 / 11 64位系统
-* **处理器**：Intel Core i3 或以上，或 M1/M2 等兼容环境
-* **物理内存**：最低 4 GB RAM
-
-## 3. 核心功能与操作流程
-1. **载入项目**：拖入或选择包含源码的项目根目录。
-2. **AI 架构解析**：可选接入本地 API 密钥，调用先进模型自动编写系统技术指标。
-3. **物理分页生成**：一键整理提取前 30 页及后 30 页代码（符合每页 50 行，含标准页眉）。
-4. **原生 Word 导出**：支持一键导出 Word .docx 格式，自带物理换页与完美双列表格。
-`;
-
-const SAMPLE_FORM = `| 申报表单字段 | 提取数值与特征值 (由本地扫描与 AI 分析自动归纳) |
-| :--- | :--- |
-| **软件名称 (全称)** | 软著文档助手系统 |
-| **软件名称 (简称)** | 软著文档助手 |
-| **版本号** | V1.0.0 |
-| **开发完成日期** | 2026年06月02日 |
-| **发表状态** | 未发表 |
-| **权利获取方式** | 原始取得 |
-| **权利范围** | 全部权利 |
-| **技术特点** | 纯本地提取分析，精确 50 行物理分页，自动表格规约 |
-| **编程语言分布** | TypeScript (65%), Node.js (25%), React (10%) |
-| **源程序量评估** | 2,150 行 (有效提取) |
-`;
+import SAMPLE_SOURCE_CODE from './assets/sample-source.txt?raw';
+import SAMPLE_MANUAL from './assets/sample-manual.md?raw';
+import SAMPLE_FORM from './assets/sample-form.md?raw';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'source' | 'manual' | 'form'>('source');
@@ -214,7 +147,7 @@ export default function App() {
           <div className="preview-body">
             {activeTab === 'source' && (
               <div className="word-header-mock">
-                <span>FreeRDP 软件源代码清单 [v1.0.0]</span>
+                <span>软著文档助手 软件源代码清单 [v1.0.0]</span>
                 <span>第 1 页 共 60 页</span>
               </div>
             )}
